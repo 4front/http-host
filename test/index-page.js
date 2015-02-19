@@ -1,6 +1,6 @@
 
 var assert = require('assert');
-var htmlPageStream = require('../lib/middleware/page-stream');
+var htmlPageStream = require('../lib/middleware/index-page');
 var querystring = require('querystring');
 var express = require('express');
 var request = require('supertest');
@@ -10,7 +10,7 @@ var debug = require('debug');
 var fs = require('fs');
 var shortid = require('shortid');
 
-describe('htmlPageStream()', function(){
+describe('indexPage()', function(){
   var server;
 
   beforeEach(function(){
@@ -34,7 +34,7 @@ describe('htmlPageStream()', function(){
 
     this.options = {
       assetHost: 'somecdn.com',
-      readPageStream: function(virtualApp, version, pageName) {
+      readPageStream: function(virtualApp, version, pageName, next) {
         return readStream('<html><head></head></html>');
       }
     };
@@ -64,10 +64,10 @@ describe('htmlPageStream()', function(){
 
   describe('when index page does not exist', function() {
     it('should return a 404', function(done) {
-      this.options.readPageStream = function(virtualApp, version, pageName) {
+      this.options.readPageStream = function(virtualApp, version, pageName, next) {
         return fs.createReadStream('non-existent.html')
           .on('error', function() {
-            this.emit('missing');
+            next(Error.http(404, "File not found"));
           });
       };
 
