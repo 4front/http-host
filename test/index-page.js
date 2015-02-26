@@ -19,6 +19,7 @@ describe('indexPage()', function(){
     server = express();
 
     this.extendedRequest = {
+      clientConfig: {},
       virtualApp: {
         appId: shortid.generate()
       },
@@ -47,18 +48,6 @@ describe('indexPage()', function(){
         console.log(err.stack);
 
       res.end(err.stack);
-    });
-  });
-
-  describe('virtual env in host', function(){
-    it('should render ', function(done){
-      request(server)
-        .get('/')
-        .expect(200)
-        .expect(function(res) {
-          console.log(res.text);
-        })
-        .end(done);
     });
   });
 
@@ -93,6 +82,20 @@ describe('indexPage()', function(){
         .get('/')
         .expect(404, done);
     });
+  });
+
+  it('sets virtual app version header', function(done) {
+    var self = this;
+
+    this.extendedRequest.virtualAppVersion = {
+      versionId: '345345'
+    };
+
+    request(server)
+      .get('/')
+      .expect(200)
+      .expect('Virtual-App-Version', this.extendedRequest.virtualAppVersion.versionId)
+      .end(done);
   });
 
   describe('client config object', function() {

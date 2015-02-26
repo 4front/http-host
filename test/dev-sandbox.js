@@ -16,6 +16,7 @@ describe('devSandbox()', function(){
 
   beforeEach(function(){
     this.extendedRequest = {
+      clientConfig: {},
       virtualEnv: 'dev',
       virtualApp: {
         name: 'test-app',
@@ -191,6 +192,7 @@ describe('devSandbox()', function(){
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
         .expect(200)
         .expect(function(res) {
+          debugger;
           var clientConfig = extractConfigVar(res.text);
           assert.equal(clientConfig.setting1, 1);
           assert.equal(clientConfig.setting2, "5");
@@ -199,8 +201,9 @@ describe('devSandbox()', function(){
     });
 
     it('should call pageName function', function(done) {
-      this.extendedRequest.htmlPageName = 'pageName';
-      this.cache.set(this.extendedRequest.virtualApp.appId + ':123:pageName', '<html><head></head></html>');
+      var indexPage = 'test-index-page';
+      this.extendedRequest.virtualApp.indexPage = indexPage;
+      this.cache.set(this.extendedRequest.virtualApp.appId + ':123:' + indexPage, '<html><head></head></html>');
 
       request(server)
         .get('/')
@@ -209,7 +212,7 @@ describe('devSandbox()', function(){
         .expect(200)
         .expect(function(res) {
           var clientConfig = extractConfigVar(res.text);
-          assert.equal(clientConfig.pageName, 'pageName');
+          assert.equal(clientConfig.pageName, indexPage);
         })
         .end(done);
     });
