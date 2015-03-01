@@ -1,6 +1,6 @@
 {
   "name": "4front-apphost",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Virtual app host container for multi-tenant container.",
   "main": "index.js",
   "scripts": {
