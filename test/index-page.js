@@ -66,6 +66,26 @@ describe('indexPage()', function(){
     });
   });  
 
+  describe('cache header', function() {
+    it('defaults to no-cache', function(done) {
+      request(server)
+        .get('/')
+        .expect('Cache-Control', 'no-cache')
+        .end(done);  
+    });
+
+    it('allows override of cache-control with function', function(done) {
+      this.options.cacheControlFn = function(req) {
+        return 'max-age=30';
+      };
+
+      request(server)
+        .get('/')
+        .expect('Cache-Control', 'max-age=30')
+        .end(done);
+    });
+  });
+
   describe('missing extended request objects', function() {
     it('returns 404 when virtualApp is missing', function(done) {
       this.extendedRequest.virtualApp = null;
