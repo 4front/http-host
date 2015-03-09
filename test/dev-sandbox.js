@@ -1,5 +1,6 @@
 
 var assert = require('assert');
+var memoryCache = require('memory-cache-stream');
 var devSandbox = require('../lib/middleware/dev-sandbox');
 var querystring = require('querystring');
 var express = require('express');
@@ -35,7 +36,7 @@ describe('devSandbox()', function(){
 
     server.use(cookieParser());
 
-    this.cache = new devSandbox.MemoryCache();
+    this.cache = memoryCache();
     this.cache.set('foo', 'bar');
 
     server.use(devSandbox({
@@ -56,7 +57,7 @@ describe('devSandbox()', function(){
   });
 
   afterEach(function() {
-    this.cache.clear();
+    this.cache.flushall();
   });
 
   describe('when not dev env', function(){

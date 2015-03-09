@@ -1,0 +1,48 @@
+{
+  "name": "app-name",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "run": "yoke serve",
+    "build": "grunt build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aerobatic/website.git"
+  },
+  "author": "David Von Lehman",
+  "dependencies": {
+  },
+  "devDependencies": {
+  },
+  "_virtualApp": {
+    "appId": "345kl33453",
+    "middleware": [
+      {
+        "route": "*",
+        "name": "requireSsl"
+      },
+      {
+        "name": "oauth",
+        "options": {
+          "providers": [
+            {
+              "name": "github",
+              "options": {
+                "clientId": "$GITHUB_OAUTH_CLIENT_ID",
+                "clientSecret": "$GITHUB_OAUTH_CLIENT_SECRET"
+              }
+            },
+            {
+              "name": "twitter",
+              "options": {
+                "clientId": "$FACEBOOK_OAUTH_CLIENT_ID",
+                "clientSecret": "$FACEBOOK_OAUTH_CLIENT_SECRET"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+};

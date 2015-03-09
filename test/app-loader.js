@@ -22,7 +22,7 @@ describe('virtualAppLoader()', function(){
 
     this.virtualAppLoaderOptions = {
       virtualHostDomain: 'testapps.com',
-      findApp: function(query, callback) {
+      findAppFn: function(query, callback) {
         if (_.isEmpty(query.name) === false)
           callback(null, {name: query.name});
         else if (_.isEmpty(query.domain) === false)
@@ -39,7 +39,7 @@ describe('virtualAppLoader()', function(){
     server.use(function(err, req, res, next) {
       res.statusCode = err.status || 500;
       if (res.statusCode === 500) {
-        console.log(err);
+        console.log(err.stack);
         res.end(err.stack);
       }
       else 
@@ -77,7 +77,7 @@ describe('virtualAppLoader()', function(){
 
   describe('findApp returns null', function() {
     it('should return 404', function(done) {
-      this.virtualAppLoaderOptions.findApp = function(query, callback) {
+      this.virtualAppLoaderOptions.findAppFn = function(query, callback) {
         debugger;
         callback(null);
       };
@@ -93,7 +93,7 @@ describe('virtualAppLoader()', function(){
     it('should call findApp passing in a domain', function(done) {
       var customDomain = "www.custom-domain.com";
 
-      this.virtualAppLoaderOptions.findApp = function(query, callback) {
+      this.virtualAppLoaderOptions.findAppFn = function(query, callback) {
         callback(null, {domain: customDomain});
       };
 
@@ -110,7 +110,7 @@ describe('virtualAppLoader()', function(){
 
   describe('app with requireSsl set to true', function() {
     it('should redirect to https', function(done) {
-      this.virtualAppLoaderOptions.findApp = function(query, callback) {
+      this.virtualAppLoaderOptions.findAppFn = function(query, callback) {
         callback(null, {requireSsl: true});
       };
 
@@ -135,7 +135,7 @@ describe('virtualAppLoader()', function(){
       };
 
       var self = this;
-      this.virtualAppLoaderOptions.findApp = function(query, callback) {
+      this.virtualAppLoaderOptions.findAppFn = function(query, callback) {
         callback(null, { configSettings: self.configSettings });
       };
 

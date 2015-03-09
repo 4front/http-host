@@ -32,6 +32,7 @@
     "express-session": "^1.10.3",
     "htmlprep": "^1.0.8",
     "lodash": "^3.0.1",
+    "memory-cache-stream": "^1.0.0",
     "redis-streams": "^1.0.3",
     "simple-errors": "^1.0.0"
   },
