@@ -1,6 +1,6 @@
 {
   "name": "4front-apphost",
-  "version": "1.0.11",
+  "version": "1.0.14",
   "description": "Virtual app host container for multi-tenant container.",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,12 @@
     "dev"
   ],
   "author": "David Von Lehman",
-  "license": "MIT",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  ],
   "bugs": {
     "url": "https://github.com/4front/apphost/issues"
   },
@@ -30,9 +35,9 @@
     "cookie-parser": "^1.3.3",
     "debug": "^2.1.1",
     "express-session": "^1.10.3",
-    "htmlprep": "^1.0.8",
+    "htmlprep": "^1.0.10",
     "lodash": "^3.0.1",
-    "memory-cache-stream": "^1.0.0",
+    "memory-cache-stream": "^1.0.2",
     "redis-streams": "^1.0.3",
     "simple-errors": "^1.0.0"
   },
