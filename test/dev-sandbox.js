@@ -59,7 +59,6 @@ describe('devSandbox()', function(){
         req.ext.assetStorage.createReadStream(req.ext.virtualApp.appId, req.ext.virtualEnv, req.ext.pageName)
           .on('missing', function(err) {
             pageMissing = true;
-            debug('MISSING');
             return next(Error.http(404, err.message));
           })
           .on('data', function(chunk) {
@@ -133,7 +132,7 @@ describe('devSandbox()', function(){
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"4534435"}'))
         .set('Host', hostname)
         .expect(404)
-        .expect(/Page index.html not found in simulator cache/, done);
+        .expect(/Page index.html not found in sandbox cache/, done);
     });
   });
 
