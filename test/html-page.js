@@ -267,6 +267,27 @@ describe('htmlPage', function() {
         .end(done);
     });    
   });
+
+  it('merges html blocks', function(done) {
+    this.extendedRequest.htmlOptions = {
+      inject: {
+        head: "<script src='custom-head.js'></script>"
+      }
+    };
+
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect(function(res) {
+        var customHeadIndex = res.text.indexOf(self.extendedRequest.htmlOptions.inject.head);
+        var clientConfigIndex = res.text.indexOf('__config__=');
+
+        assert.ok(customHeadIndex !== -1);
+        assert.ok(clientConfigIndex !== -1);
+        assert.ok(clientConfigIndex < customHeadIndex);
+      })
+      .end(done);
+  });
 });
 
 // Readable stream that emits an error

@@ -13,19 +13,20 @@ var cheerio = require('cheerio');
 describe('devSandbox()', function(){
   var hostname = 'appname.platformhost.com';
 
-  var server;
+  var server, self;
 
   beforeEach(function(){
+    self = this;
+
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
+      pageName: 'index.html',
       virtualApp: {
         name: 'test-app',
         appId: '2awoifj48'
       }
     };
-
-    var self = this;
 
     server = express();
 
@@ -47,32 +48,41 @@ describe('devSandbox()', function(){
     }));
 
     server.use(function(req, res, next) {
-      res.send(self.extendedRequest.virtualEnv);
+      if (req.ext.sendJsonExtendedRequest === true) {
+        return res.json(req.ext);
+      }
+      else {
+        // Simulate what the html-page middleware does.
+        res.set('Content-Type', 'text/html');
+
+        var pageMissing;
+        req.ext.assetStorage.createReadStream(req.ext.virtualApp.appId, req.ext.virtualEnv, req.ext.pageName)
+          .on('missing', function(err) {
+            pageMissing = true;
+            debug('MISSING');
+            return next(Error.http(404, err.message));
+          })
+          .on('data', function(chunk) {
+            if (!pageMissing)
+              res.write(chunk);
+          })
+          .on('end', function() {
+            res.end();
+          });
+      }
     });
 
     server.use(function(err, req, res, next) {
       res.statusCode = err.status || 500;
+      if (res.statusCode === 500)
+        console.log(err.stack);
+
       res.end(err.message);
     });
   });
 
   afterEach(function() {
     this.cache.flushall();
-  });
-
-  describe('when not dev env', function(){
-    it('should set buildType to prod', function(done){
-      this.extendedRequest.virtualEnv = 'prod';
-
-      request(server)
-        .get('/')
-        .set('Host', 'appname.platformhost.com')
-        .expect(200)
-        .expect(function(res) {
-          assert.equal(res.text, 'prod');
-        })
-        .end(done);
-    })
   });
 
   describe('when request includes file extension', function() {
@@ -91,7 +101,7 @@ describe('devSandbox()', function(){
       request(server)
         .get('/')
         .set('Host', hostname)
-        .expect(500)
+        .expect(400)
         .expect(/No user parameter found/, done);
     });
   });
@@ -123,7 +133,7 @@ describe('devSandbox()', function(){
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"4534435"}'))
         .set('Host', hostname)
         .expect(404)
-        .expect(/Page not found/, done);
+        .expect(/Page index.html not found in simulator cache/, done);
     });
   });
 
@@ -133,7 +143,7 @@ describe('devSandbox()', function(){
 
       // Put some html into the cache with the correct key
       var html = '<html></html>';
-      this.cache.set(this.extendedRequest.virtualApp.appId + ':' + devOptions.user + ':index', html);
+      this.cache.set(this.extendedRequest.virtualApp.appId + ':' + devOptions.user + ':' + self.extendedRequest.pageName, html);
 
       request(server)
         .get('/')
@@ -151,7 +161,16 @@ describe('devSandbox()', function(){
     beforeEach(function() {
       // Put some html into the cache with the correct key
       var html = '<html><head></head><body></body></html>';
-      this.cache.set(this.extendedRequest.virtualApp.appId + ':123:index', html);
+      this.userId = '123';
+
+      var cacheKey = [
+        this.extendedRequest.virtualApp.appId, 
+        this.userId,
+        self.extendedRequest.pageName
+      ].join(':');
+
+      this.cache.set(cacheKey, html);
+      this.extendedRequest.sendJsonExtendedRequest = true;
     });
 
     it('should inject simulator banner', function(done) {
@@ -161,7 +180,7 @@ describe('devSandbox()', function(){
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
         .expect(200)
         .expect(function(res) {
-          assert.ok(res.text.indexOf('<style>body::after{background-image:url') > 0);
+          assert.ok(res.body.htmlOptions.inject.head.indexOf('<style>body::after{background-image:url') > -1);
         })
         .end(done);
     });
@@ -173,57 +192,31 @@ describe('devSandbox()', function(){
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
         .expect(200)
         .expect(function(res) {
-          var clientConfig = extractConfigVar(res.text);
-          assert.equal(clientConfig.simulator, true);
-          assert.equal(clientConfig.buildType, 'debug');
-          assert.equal(clientConfig.assetPath, '//localhost:3000');
+          assert.equal(res.body.clientConfig.simulator, true);
+          assert.equal(res.body.buildType, 'debug');
+          assert.equal(res.body.versionAssetPath, '//localhost:3000');
         })
         .end(done);
     });
 
-    it('should include req.clientConfig in __config__ global var', function(done) {
-      this.extendedRequest.clientConfig = {
-        setting1: 1,
-        setting2: "5"
-      };
+    // it('should include req.clientConfig in __config__ global var', function(done) {
+    //   this.extendedRequest.clientConfig = {
+    //     setting1: 1,
+    //     setting2: "5"
+    //   };
 
-      request(server)
-        .get('/')
-        .set('Host', hostname)
-        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
-        .expect(200)
-        .expect(function(res) {
-          debugger;
-          var clientConfig = extractConfigVar(res.text);
-          assert.equal(clientConfig.setting1, 1);
-          assert.equal(clientConfig.setting2, "5");
-        })
-        .end(done);
-    });
-
-    it('should call pageName function', function(done) {
-      var indexPage = 'test-index-page';
-      this.extendedRequest.virtualApp.indexPage = indexPage;
-      this.cache.set(this.extendedRequest.virtualApp.appId + ':123:' + indexPage, '<html><head></head></html>');
-
-      request(server)
-        .get('/')
-        .set('Host', hostname)
-        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
-        .expect(200)
-        .expect(function(res) {
-          var clientConfig = extractConfigVar(res.text);
-          assert.equal(clientConfig.pageName, indexPage);
-        })
-        .end(done);
-    });
+    //   request(server)
+    //     .get('/')
+    //     .set('Host', hostname)
+    //     .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
+    //     .expect(200)
+    //     .expect(function(res) {
+    //       debugger;
+    //       var clientConfig = extractConfigVar(res.text);
+    //       assert.equal(clientConfig.setting1, 1);
+    //       assert.equal(clientConfig.setting2, "5");
+    //     })
+    //     .end(done);
+    // });
   });
 });
-
-function extractConfigVar(html) {
-  var $ = cheerio.load(html);
-  var configScript = $('head > script').last().text();
-  var match = /__config__=(.*);/.exec(configScript);
-  debugger;
-  return JSON.parse(match[1]);
-}
