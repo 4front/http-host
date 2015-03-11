@@ -288,6 +288,21 @@ describe('htmlPage', function() {
       })
       .end(done);
   });
+
+  it('extends htmlOptions from req.ext.htmlOptions', function(done) {
+    this.extendedRequest.htmlOptions = {
+      liveReload: true,
+      liveReloadPort: 35728
+    };
+
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect(function(res) {
+        assert.ok(res.text.indexOf('//localhost:35728/livereload.js') > -1);
+      })
+      .end(done);
+  });
 });
 
 // Readable stream that emits an error

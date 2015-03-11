@@ -10,6 +10,8 @@ var debug = require('debug');
 var cookieParser = require('cookie-parser');
 var cheerio = require('cheerio');
 
+require('simple-errors');
+
 describe('devSandbox()', function(){
   var hostname = 'appname.platformhost.com';
 
@@ -44,7 +46,8 @@ describe('devSandbox()', function(){
       cache: this.cache,
       showBanner: true,
       port: 3000,
-      liveReload: true
+      liveReload: true,
+      liveReloadPort: 35728
     }));
 
     server.use(function(req, res, next) {
@@ -55,18 +58,18 @@ describe('devSandbox()', function(){
         // Simulate what the html-page middleware does.
         res.set('Content-Type', 'text/html');
 
-        var pageMissing;
+        var dataRead = false;
         req.ext.assetStorage.createReadStream(req.ext.virtualApp.appId, req.ext.virtualEnv, req.ext.pageName)
-          .on('missing', function(err) {
-            pageMissing = true;
-            return next(Error.http(404, err.message));
-          })
           .on('data', function(chunk) {
-            if (!pageMissing)
-              res.write(chunk);
+            if (chunk)
+              dataRead = true;
+            res.write(chunk);
           })
           .on('end', function() {
-            res.end();
+            if (!dataRead)
+              this.emit('missing');
+            else
+              res.end();
           });
       }
     });
@@ -198,24 +201,16 @@ describe('devSandbox()', function(){
         .end(done);
     });
 
-    // it('should include req.clientConfig in __config__ global var', function(done) {
-    //   this.extendedRequest.clientConfig = {
-    //     setting1: 1,
-    //     setting2: "5"
-    //   };
-
-    //   request(server)
-    //     .get('/')
-    //     .set('Host', hostname)
-    //     .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
-    //     .expect(200)
-    //     .expect(function(res) {
-    //       debugger;
-    //       var clientConfig = extractConfigVar(res.text);
-    //       assert.equal(clientConfig.setting1, 1);
-    //       assert.equal(clientConfig.setting2, "5");
-    //     })
-    //     .end(done);
-    // });
+    it('should render livereload', function(done) {
+      request(server)
+        .get('/')
+        .set('Host', hostname)
+        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
+        .expect(200)
+        .expect(function(res) {
+          assert.ok(res.body.htmlOptions.liveReload);
+        })
+        .end(done);
+    });
   });
 });
