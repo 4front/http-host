@@ -78,17 +78,31 @@ describe('htmlPage', function() {
         .end(done);
     });
 
-    it('returns noauth page', function(done) {
+    it('redirects to root when path is not root', function(done) {
+      this.extendedRequest.isAuthenticated = false;
+      this.options.auth = true;
+      this.options.noAuthPage = 'login.html';
+      this.options.returnUrlCookie = 'return_url';
+
+      supertest(this.server)
+        .get('/foo?plan=1')
+        .expect(302)
+        .expect("Moved Temporarily. Redirecting to /")
+        .expect('set-cookie', "return_url=" + encodeURIComponent('/foo?plan=1') + "; Path=/; HttpOnly")
+        .end(done);
+    });
+
+    it('rewrites to login.html when path is root', function(done) {
       this.extendedRequest.isAuthenticated = false;
       this.options.auth = true;
       this.options.noAuthPage = 'login.html';
 
       supertest(this.server)
-        .get('/foo')
+        .get('/')
         .expect(200)
         .expect('Virtual-App-Page', 'login.html')
         .end(done);
-    });
+    });    
   });
 
   it('returns 400 if no virtualApp context', function(done) {
