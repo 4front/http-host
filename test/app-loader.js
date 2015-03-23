@@ -125,77 +125,77 @@ describe('virtualAppLoader()', function(){
     });
   });
 
-  describe('virtual app config settings', function() {
-    beforeEach(function() {
-      this.configSettings = {
-        _default: {
-          setting1: {value: 'foo', sendToClient: true},
-          apiKey: {envVariable: 'API_KEY'}
-        }
-      };
+  // describe('virtual app config settings', function() {
+  //   beforeEach(function() {
+  //     this.configSettings = {
+  //       _default: {
+  //         setting1: {value: 'foo', sendToClient: true},
+  //         apiKey: {envVariable: 'API_KEY'}
+  //       }
+  //     };
 
-      var self = this;
-      this.virtualAppLoaderOptions.findAppFn = function(query, callback) {
-        callback(null, { configSettings: self.configSettings });
-      };
+  //     var self = this;
+  //     this.virtualAppLoaderOptions.findAppFn = function(query, callback) {
+  //       callback(null, { configSettings: self.configSettings });
+  //     };
 
-      this.envVariables = {
-        API_KEY: "api-key"
-      };
+  //     this.envVariables = {
+  //       API_KEY: "api-key"
+  //     };
 
-      this.virtualAppLoaderOptions.envVariable = function(virtualApp, key) {
-        return self.envVariables[key];
-      }
-    });
+  //     this.virtualAppLoaderOptions.envVariable = function(virtualApp, key) {
+  //       return self.envVariables[key];
+  //     }
+  //   });
 
-    it('should load settings', function(done) {
-      request(server)
-        .get('/path')
-        .set('Host', 'appname.testapps.com')
-        .expect(200)
-        .expect(function(res) {
-          var configSettings = JSON.parse(res.text).configSettings;
-          assert.equal(configSettings.setting1, 'foo');
-          assert.equal(configSettings.apiKey, 'api-key');
-        })
-        .end(done);
-    });
+  //   it('should load settings', function(done) {
+  //     request(server)
+  //       .get('/path')
+  //       .set('Host', 'appname.testapps.com')
+  //       .expect(200)
+  //       .expect(function(res) {
+  //         var configSettings = JSON.parse(res.text).configSettings;
+  //         assert.equal(configSettings.setting1, 'foo');
+  //         assert.equal(configSettings.apiKey, 'api-key');
+  //       })
+  //       .end(done);
+  //   });
 
-    it('should override default with environment specific value', function(done) {
-      this.configSettings['test'] = {
-        setting1: {value: 'test-foo'}
-      };
+  //   it('should override default with environment specific value', function(done) {
+  //     this.configSettings['test'] = {
+  //       setting1: {value: 'test-foo'}
+  //     };
 
-      request(server)
-        .get('/path')
-        .set('Host', 'appname--test.testapps.com')
-        .expect(200)
-        .expect(function(res) {
-          var configSettings = JSON.parse(res.text).configSettings;
-          assert.equal(configSettings.setting1, 'test-foo');
-        })
-        .end(done);
-    });
+  //     request(server)
+  //       .get('/path')
+  //       .set('Host', 'appname--test.testapps.com')
+  //       .expect(200)
+  //       .expect(function(res) {
+  //         var configSettings = JSON.parse(res.text).configSettings;
+  //         assert.equal(configSettings.setting1, 'test-foo');
+  //       })
+  //       .end(done);
+  //   });
 
-    it('should only add to clientConfig settings where sendToClient===true', function(done) {
-      this.configSettings = {
-        _default: {
-          setting1: {value:'foo', sendToClient:true},
-          setting2: {value:'bar'}
-        }
-      };
+  //   it('should only add to clientConfig settings where sendToClient===true', function(done) {
+  //     this.configSettings = {
+  //       _default: {
+  //         setting1: {value:'foo', sendToClient:true},
+  //         setting2: {value:'bar'}
+  //       }
+  //     };
 
-      request(server)
-        .get('/path')
-        .set('Host', 'appname.testapps.com')
-        .expect(200)
-        .expect(function(res) {
-          var clientSettings = JSON.parse(res.text).clientConfig.settings;
-          debugger;
-          assert.equal(clientSettings.setting1, 'foo');
-          assert.ok(_.isUndefined(clientSettings.setting2));
-        })
-        .end(done);
-    });
-  });
+  //     request(server)
+  //       .get('/path')
+  //       .set('Host', 'appname.testapps.com')
+  //       .expect(200)
+  //       .expect(function(res) {
+  //         var clientSettings = JSON.parse(res.text).clientConfig.settings;
+  //         debugger;
+  //         assert.equal(clientSettings.setting1, 'foo');
+  //         assert.ok(_.isUndefined(clientSettings.setting2));
+  //       })
+  //       .end(done);
+  //   });
+  // });
 });
