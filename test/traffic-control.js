@@ -61,7 +61,12 @@ describe('trafficControl()', function(){
         .expect(function(res) {
           var setCookieHeader = res.headers['set-cookie'];
 
-          assert.equal(res.headers['set-cookie'][0], '_version=abc; Path=/; HttpOnly');
+          var cookieValue = encodeURIComponent(JSON.stringify({
+            versionId: 'abc',
+            method: 'urlOverride'
+          }));
+
+          assert.equal(res.headers['set-cookie'][0], '_version=' + cookieValue + '; Path=/; HttpOnly');
           assert.ok(/testapp.platform.com/.test(res.text));
         })
         .end(done);
@@ -72,11 +77,10 @@ describe('trafficControl()', function(){
     it('should use that version', function(done) {
       request(server)
         .get('/')
-        .set('Cookie', '_version=1.1.1')
+        .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId:'1.1.1', method:'urlOverride'})))
         .expect(200)
-        .expect(function(res) {
-          assert.equal(res.body.virtualAppVersion.versionId, '1.1.1');
-        })
+        .expect('Virtual-App-Version-Method', 'urlOverride')
+        .expect('Virtual-App-Version-Id', '1.1.1')
         .end(done);
     });
   });
@@ -88,9 +92,8 @@ describe('trafficControl()', function(){
       request(server)
         .get('/')
         .expect(200)
-        .expect(function(res) {
-          assert.equal(res.body.virtualAppVersion.versionId, '1');
-        })
+        .expect('Virtual-App-Version-Id', '1')
+        .expect('Virtual-App-Version-Method', 'randomAssignment')
         .end(done);
     });
 
@@ -122,11 +125,9 @@ describe('trafficControl()', function(){
       
       request(server)
         .get('/')
-        .set('Cookie', '_version=2')
+        .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId: '2'})))
         .expect(200)
-        .expect(function(res) {
-          assert.equal(res.body.virtualAppVersion.versionId, '1');
-        })
+        .expect('Virtual-App-Version-Id', '1')
         .end(done);
     });
 
@@ -137,12 +138,37 @@ describe('trafficControl()', function(){
       
       request(server)
         .get('/')
-        .set('Cookie', '_version=1.1.1')
+        .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId: '1.1.1'})))
         .expect(200)
         .expect(function(res) {
           assert.equal(res.body.virtualAppVersion.versionId, 'latest');
         })
         .end(done);
     });
+  });
+
+  it('clears cookie and redirects when _version=reset', function(done) {
+    request(server)
+      .get('/?_version=reset&foo=1')
+      .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId: '1'})))
+      .expect(302)
+      .expect(function(res) {
+        assert.equal(res.headers.location, 'http://127.0.0.1/?foo=1');
+        assert.ok(res.headers['set-cookie'][0].indexOf('_version=;') > -1);
+      })
+      .end(done);
+  });
+
+  it('serves latest version if invalid JSON cookie', function(done) {
+    request(server)
+      .get('/')
+      .set('Cookie', '_version=invalid_json')
+      .expect(200)
+      .expect('Virtual-App-Version-Id', 'latest')
+      .expect('Virtual-App-Version-Method', 'latest')
+      .expect(function(res) {
+        assert.ok(res.headers['set-cookie'][0].indexOf('_version=;') > -1);
+      })
+      .end(done);
   });
 });

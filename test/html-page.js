@@ -191,8 +191,6 @@ describe('htmlPage', function() {
           var clientConfig = parseClientConfig(res.text);
           assert.equal(clientConfig.buildType, 'release');
           assert.equal(clientConfig.pageName, 'index.html');
-          assert.equal(clientConfig.versionId, version.versionId);
-          assert.equal(clientConfig.versionName, version.name);
 
           assert.equal(clientConfig.assetPath, self.options.assetPath + '/' + version.versionId);
         })
