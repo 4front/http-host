@@ -18,7 +18,8 @@ describe('trafficControl()', function(){
 
     server.use(function(req, res, next) {
       req.ext = {
-        trafficControlRules: self.trafficControlRules
+        trafficControlRules: self.trafficControlRules,
+        clientConfig: {}
       };
       next();
     });
