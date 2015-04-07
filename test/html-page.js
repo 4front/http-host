@@ -22,10 +22,14 @@ describe('htmlPage', function() {
 
     this.extendedRequest = {
       virtualApp: {
-        appId: shortid.generate(), 
-        name: 'test-app'   
+        appId: shortid.generate(),
+        name: 'test-app'
       },
       virtualEnv: 'production',
+      virtualAppVersion: {
+        versionId: shortid.generate(),
+        name: 'v1'
+      },
       isAuthenticated: false
     };
 
@@ -54,7 +58,7 @@ describe('htmlPage', function() {
       .expect('Virtual-App-Page', 'docs/getting-started.html')
       .end(done);
   });
-  
+
   describe('authentication', function() {
     it('un-authenticated user redirected', function(done) {
       this.extendedRequest.isAuthenticated = false;
@@ -102,7 +106,7 @@ describe('htmlPage', function() {
         .expect(200)
         .expect('Virtual-App-Page', 'login.html')
         .end(done);
-    });    
+    });
   });
 
   it('returns 400 if no virtualApp context', function(done) {
@@ -119,7 +123,7 @@ describe('htmlPage', function() {
       .get('/')
       .expect(200)
       .expect('Content-Type', /^text\/html/)
-      .expect('Virtual-App-Version', 'latest')
+      .expect('Virtual-App-Version', this.extendedRequest.virtualAppVersion.versionId)
       .expect(/\<title\>test page\<\/title\>/)
       .end(done);
   });
@@ -139,7 +143,6 @@ describe('htmlPage', function() {
       .get('/')
       .expect(404)
       .expect('Content-Type', /^text\/html/)
-      .expect('Virtual-App-Version', 'latest')
       .expect(/Page index\.html not found/)
       .end(done);
   });
@@ -277,7 +280,7 @@ describe('htmlPage', function() {
         .expect(301)
         .expect(/Redirecting to \/path\/about$/)
         .end(done);
-    });    
+    });
   });
 
   it('merges html blocks', function(done) {

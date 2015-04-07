@@ -59,18 +59,11 @@ describe('devSandbox()', function(){
         res.set('Content-Type', 'text/html');
 
         var dataRead = false;
-        req.ext.assetStorage.createReadStream(req.ext.virtualApp.appId, req.ext.virtualEnv, req.ext.pageName)
-          .on('data', function(chunk) {
-            if (chunk)
-              dataRead = true;
-            res.write(chunk);
-          })
-          .on('end', function() {
-            if (!dataRead)
-              this.emit('missing');
-            else
-              res.end();
-          });
+        req.ext.createReadStream(req.ext.pageName, function(err, stream) {
+          if (err) return next(err);
+
+          stream.pipe(res);
+        });
       }
     });
 
@@ -166,7 +159,7 @@ describe('devSandbox()', function(){
       this.userId = '123';
 
       var cacheKey = [
-        this.extendedRequest.virtualApp.appId, 
+        this.extendedRequest.virtualApp.appId,
         this.userId,
         self.extendedRequest.pageName
       ].join(':');
