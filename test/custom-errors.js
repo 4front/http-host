@@ -17,6 +17,10 @@ describe('customErrors', function() {
 
     this.server = express();
 
+    this.server.settings.logger = {
+      error: sinon.spy(function() {})
+    };
+
     this.server.settings.assetStorage = {
       createReadStream: sinon.spy(function(appId, versionId, pageName) {
         return sbuff("<html>custom error</html>");
@@ -74,6 +78,7 @@ describe('customErrors', function() {
       .expect('Error-Code', 'testError')
       .expect("<html>custom error</html>")
       .expect(function(res) {
+        assert.ok(self.server.settings.logger.error.called);
         assert.ok(self.server.settings.assetStorage.createReadStream.called);
       })
       .end(done);
