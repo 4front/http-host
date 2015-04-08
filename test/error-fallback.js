@@ -8,6 +8,8 @@ var errorFallback = require('../lib/middleware/error-fallback');
 require('simple-errors');
 
 describe('errorFallback', function() {
+  var self;
+  
   beforeEach(function() {
     self = this;
 
