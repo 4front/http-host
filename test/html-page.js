@@ -3,6 +3,7 @@ var express = require('express');
 var shortid = require('shortid');
 var stream = require('stream');
 var supertest = require('supertest');
+var sbuff = require('simple-bufferstream');
 var htmlPage = require('../lib/middleware/html-page');
 
 var self;
@@ -16,7 +17,7 @@ describe('htmlPage', function() {
     this.server = express();
     this.server.settings.assetStorage = {
       createReadStream: function(appId, versionId, pageName) {
-        return createReadStream(self.html);
+        return sbuff(self.html);
       }
     };
 
@@ -325,15 +326,6 @@ function createErrorStream() {
   var rs = stream.Readable();
   rs._read = function () {
     rs.emit('error', 'read error');
-    rs.push(null);
-  };
-  return rs;
-}
-
-function createReadStream(str) {
-  var rs = stream.Readable();
-  rs._read = function () {
-    rs.push(str);
     rs.push(null);
   };
   return rs;
