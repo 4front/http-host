@@ -9,11 +9,14 @@ require('simple-errors');
 
 describe('errorFallback', function() {
   var self;
-  
+
   beforeEach(function() {
     self = this;
 
     this.server = express();
+    this.server.settings.logger = {
+      error: sinon.spy(function() {});
+    };
 
     this.server.use(function(req, res, next) {
       req.ext = {};
