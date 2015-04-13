@@ -16,11 +16,14 @@ describe('customErrors', function() {
     self = this;
 
     this.server = express();
-
     this.server.settings.deployments = {
       readFileStream: sinon.spy(function(appId, versionId, pageName) {
         return sbuff("<html>custom error</html>");
       })
+    };
+
+    this.server.settings.logger = {
+      error: sinon.spy(function() {})
     };
 
     this.server.settings.logger = {
@@ -84,6 +87,7 @@ describe('customErrors', function() {
       .expect(function(res) {
         assert.ok(self.server.settings.deployments.readFileStream.calledWith(
           self.virtualApp.appId, self.virtualAppVersion.versionId, '500.html'));
+        assert.ok(self.server.settings.logger.error.called);
       })
       .end(done);
   });
