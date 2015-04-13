@@ -1,4 +1,5 @@
 var assert = require('assert');
+var sinon = require('sinon');
 var express = require('express');
 var shortid = require('shortid');
 var stream = require('stream');
@@ -15,10 +16,10 @@ describe('htmlPage', function() {
     this.html = '<html><head><title>test page</title></head><body><div></div></body></html>';
 
     this.server = express();
-    this.server.settings.assetStorage = {
-      createReadStream: function(appId, versionId, pageName) {
+    this.server.settings.deployments = {
+      readFileStream: sinon.spy(function(appId, versionId, pageName) {
         return sbuff(self.html);
-      }
+      })
     };
 
     this.extendedRequest = {
@@ -130,14 +131,12 @@ describe('htmlPage', function() {
   });
 
   it('returns 404 status code', function(done) {
-    this.server.settings.assetStorage = {
-      createReadStream: function(appId, versionId, pageName) {
-        return createErrorStream()
-          .on('error', function() {
-            // Emit custom missing event
-            this.emit('missing');
-          });
-      }
+    this.server.settings.deployments.readFileStream = function(appId, versionId, pageName) {
+      return createErrorStream()
+        .on('error', function() {
+          // Emit custom missing event
+          this.emit('missing');
+        });
     };
 
     supertest(this.server)

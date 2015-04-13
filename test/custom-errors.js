@@ -17,23 +17,31 @@ describe('customErrors', function() {
 
     this.server = express();
 
-    this.server.settings.assetStorage = {
-      createReadStream: sinon.spy(function(appId, versionId, pageName) {
+    this.server.settings.deployments = {
+      readFileStream: sinon.spy(function(appId, versionId, pageName) {
         return sbuff("<html>custom error</html>");
       })
+    };
+
+    this.server.settings.logger = {
+      error: sinon.spy(function(){})
+    };
+
+    this.virtualApp = {
+      appId: '123',
+      name: 'test-app'
+    };
+
+    this.virtualAppVersion = {
+      versionId: '456',
+      name: 'v1'
     };
 
     this.server.use(function(req, res, next) {
       req.ext = {
         virtualEnv: 'production',
-        virtualApp: {
-          appId: '123',
-          name: 'test-app'
-        },
-        virtualAppVersion: {
-          versionId: '456',
-          name: 'v1'
-        }
+        virtualApp: self.virtualApp,
+        virtualAppVersion: self.virtualAppVersion
       };
 
       if (_.isFunction(self.updateRequest))
@@ -74,7 +82,8 @@ describe('customErrors', function() {
       .expect('Error-Code', 'testError')
       .expect("<html>custom error</html>")
       .expect(function(res) {
-        assert.ok(self.server.settings.assetStorage.createReadStream.called);
+        assert.ok(self.server.settings.deployments.readFileStream.calledWith(
+          self.virtualApp.appId, self.virtualAppVersion.versionId, '500.html'));
       })
       .end(done);
   });
@@ -114,7 +123,7 @@ describe('customErrors', function() {
   });
 
   it('advances to fallback if page stream missing', function(done) {
-    this.server.settings.assetStorage.createReadStream = function() {
+    this.server.settings.deployments.readFileStream = function() {
       return testUtil.createMissingStream();
     };
 

@@ -14,8 +14,7 @@ require('simple-errors');
 
 describe('devSandbox()', function(){
   var hostname = 'appname.platformhost.com';
-
-  var server, self;
+  var self;
 
   beforeEach(function(){
     self = this;
@@ -30,27 +29,26 @@ describe('devSandbox()', function(){
       }
     };
 
-    server = express();
+    this.server = express();
 
-    server.use(function(req, res, next) {
+    this.server.use(function(req, res, next) {
       req.ext = self.extendedRequest;
       next();
     });
 
-    server.use(cookieParser());
+    this.server.use(cookieParser());
 
-    this.cache = memoryCache();
-    this.cache.set('foo', 'bar');
+    this.server.settings.cache = memoryCache();
+    this.server.settings.cache.set('foo', 'bar');
 
-    server.use(devSandbox({
-      cache: this.cache,
+    this.server.use(devSandbox({
       showBanner: true,
       port: 3000,
       liveReload: true,
       liveReloadPort: 35728
     }));
 
-    server.use(function(req, res, next) {
+    this.server.use(function(req, res, next) {
       if (req.ext.sendJsonExtendedRequest === true) {
         return res.json(req.ext);
       }
@@ -67,7 +65,7 @@ describe('devSandbox()', function(){
       }
     });
 
-    server.use(function(err, req, res, next) {
+    this.server.use(function(err, req, res, next) {
       res.statusCode = err.status || 500;
       if (res.statusCode === 500)
         console.log(err.stack);
@@ -77,12 +75,12 @@ describe('devSandbox()', function(){
   });
 
   afterEach(function() {
-    this.cache.flushall();
+    this.server.settings.cache.flushall();
   });
 
   describe('when request includes file extension', function() {
     it("should redirect to localhost", function(done) {
-      request(server)
+      request(this.server)
         .get('/js/app.js')
         .set('Host', hostname)
         .expect(302)
@@ -93,7 +91,7 @@ describe('devSandbox()', function(){
 
   describe('when dev environment and no cookies and no devparams', function() {
     it('should return error', function(done) {
-      request(server)
+      request(this.server)
         .get('/')
         .set('Host', hostname)
         .expect(400)
@@ -104,7 +102,7 @@ describe('devSandbox()', function(){
   describe('when dev environment and devparams', function() {
     it('should redirect without devparams and set cookie', function(done) {
       var devOptions = {port:'3000', user:'43534534'};
-      request(server)
+      request(this.server)
         .get('/foo?_dev=' + encodeURIComponent(querystring.stringify(devOptions)))
         .set('Host', hostname)
         .expect(302)
@@ -123,7 +121,7 @@ describe('devSandbox()', function(){
 
   describe('when developer index.html page not in cache', function() {
     it('should return an error', function(done) {
-      request(server)
+      request(this.server)
         .get('/')
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"4534435"}'))
         .set('Host', hostname)
@@ -138,9 +136,9 @@ describe('devSandbox()', function(){
 
       // Put some html into the cache with the correct key
       var html = '<html></html>';
-      this.cache.set(this.extendedRequest.virtualApp.appId + ':' + devOptions.user + ':' + self.extendedRequest.pageName, html);
+      this.server.settings.cache.set(this.extendedRequest.virtualApp.appId + ':' + devOptions.user + ':' + self.extendedRequest.pageName, html);
 
-      request(server)
+      request(this.server)
         .get('/')
         .set('Host', hostname)
         .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(devOptions)))
@@ -164,12 +162,12 @@ describe('devSandbox()', function(){
         self.extendedRequest.pageName
       ].join(':');
 
-      this.cache.set(cacheKey, html);
+      this.server.settings.cache.set(cacheKey, html);
       this.extendedRequest.sendJsonExtendedRequest = true;
     });
 
     it('should inject simulator banner', function(done) {
-      request(server)
+      request(this.server)
         .get('/')
         .set('Host', hostname)
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
@@ -181,7 +179,7 @@ describe('devSandbox()', function(){
     });
 
     it('should have __config__ variable', function(done) {
-      request(server)
+      request(this.server)
         .get('/')
         .set('Host', hostname)
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
@@ -195,7 +193,7 @@ describe('devSandbox()', function(){
     });
 
     it('should render livereload', function(done) {
-      request(server)
+      request(this.server)
         .get('/')
         .set('Host', hostname)
         .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
