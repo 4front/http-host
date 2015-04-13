@@ -5,6 +5,7 @@ var shortid = require('shortid');
 var stream = require('stream');
 var supertest = require('supertest');
 var sbuff = require('simple-bufferstream');
+var testUtil = require('./test-util');
 var htmlPage = require('../lib/middleware/html-page');
 
 var self;
@@ -17,7 +18,7 @@ describe('htmlPage', function() {
 
     this.server = express();
     this.server.settings.deployments = {
-      readFileStream: sinon.spy(function(appId, versionId, pageName) {
+      readFileStream: sinon.spy(function(appId, versionId, pagePath) {
         return sbuff(self.html);
       })
     };
@@ -44,16 +45,10 @@ describe('htmlPage', function() {
 
     this.server.get('/*', htmlPage(this.options));
 
-    this.server.use(function(err, req, res, next) {
-      res.statusCode = err.status || 500;
-      if (res.statusCode >= 500)
-        console.log(err.stack);
-
-      res.send(err.message);
-    });
+    this.server.use(testUtil.errorHandler);
   });
 
-  it('uses url path as pageName.html', function(done) {
+  it('uses url path as pagePath.html', function(done) {
     supertest(this.server)
       .get('/docs/getting-started?fake=1')
       .expect(200)
@@ -131,7 +126,7 @@ describe('htmlPage', function() {
   });
 
   it('returns 404 status code', function(done) {
-    this.server.settings.deployments.readFileStream = function(appId, versionId, pageName) {
+    this.server.settings.deployments.readFileStream = function(appId, versionId, pagePath) {
       return createErrorStream()
         .on('error', function() {
           // Emit custom missing event
@@ -142,8 +137,7 @@ describe('htmlPage', function() {
     supertest(this.server)
       .get('/')
       .expect(404)
-      .expect('Content-Type', /^text\/html/)
-      .expect(/Page index\.html not found/)
+      .expect('Error-Code', 'pageNotFound')
       .end(done);
   });
 
@@ -193,7 +187,7 @@ describe('htmlPage', function() {
         .expect(function(res) {
           var clientConfig = parseClientConfig(res.text);
           assert.equal(clientConfig.buildType, 'release');
-          assert.equal(clientConfig.pageName, 'index.html');
+          assert.equal(clientConfig.pagePath, 'index.html');
 
           assert.equal(clientConfig.assetPath, self.options.assetPath + '/' + version.versionId);
         })

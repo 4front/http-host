@@ -138,22 +138,18 @@ describe('customErrors', function() {
       .end(done);
   });
 
-  it('uses override createReadStream option', function(done) {
-    var readStream = sinon.spy(function(pageName, callback) {
-      callback(null, sbuff("<html>special</html>"))
-    });
-
+  it('uses override loadPageMiddleware', function(done) {
     this.updateRequest = function(req) {
-      req.ext.createReadStream = readStream;
+      req.ext.loadPageMiddleware = function(req, res, next) {
+        req.ext.htmlPageStream = sbuff("<html>special</html>");
+        next();
+      };
     };
 
     supertest(this.server)
       .get('/')
       .expect(500)
       .expect("<html>special</html>")
-      .expect(function() {
-        assert.ok(readStream.calledWith('500.html'));
-      })
       .end(done);
   });
 });

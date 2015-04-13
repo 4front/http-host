@@ -9,6 +9,7 @@ var _ = require('lodash');
 var debug = require('debug');
 var cookieParser = require('cookie-parser');
 var cheerio = require('cheerio');
+var testUtil = require('./test-util');
 
 require('simple-errors');
 
@@ -22,7 +23,7 @@ describe('devSandbox()', function(){
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
-      pageName: 'index.html',
+      pagePath: 'index.html',
       virtualApp: {
         name: 'test-app',
         appId: '2awoifj48'
@@ -57,21 +58,17 @@ describe('devSandbox()', function(){
         res.set('Content-Type', 'text/html');
 
         var dataRead = false;
-        req.ext.createReadStream(req.ext.pageName, function(err, stream) {
-          if (err) return next(err);
+        req.ext.pagePath = 'index.html';
+        req.ext.loadPageMiddleware(req, res, function(err) {
+          if (_.isError(err))
+            return next(err);
 
-          stream.pipe(res);
+          req.ext.htmlPageStream.pipe(res);
         });
       }
     });
 
-    this.server.use(function(err, req, res, next) {
-      res.statusCode = err.status || 500;
-      if (res.statusCode === 500)
-        console.log(err.stack);
-
-      res.end(err.message);
-    });
+    this.server.use(testUtil.errorHandler);
   });
 
   afterEach(function() {
@@ -123,10 +120,11 @@ describe('devSandbox()', function(){
     it('should return an error', function(done) {
       request(this.server)
         .get('/')
-        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"4534435"}'))
+        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"4534435"}') + '; _sandboxPage=1')
         .set('Host', hostname)
         .expect(404)
-        .expect(/Page index.html not found in sandbox cache/, done);
+        .expect('Error-Code', 'pageNotFound')
+        .end(done);
     });
   });
 
@@ -136,12 +134,12 @@ describe('devSandbox()', function(){
 
       // Put some html into the cache with the correct key
       var html = '<html></html>';
-      this.server.settings.cache.set(this.extendedRequest.virtualApp.appId + ':' + devOptions.user + ':' + self.extendedRequest.pageName, html);
+      this.server.settings.cache.set(devOptions.user + '/' + this.extendedRequest.virtualApp.appId + '/' + self.extendedRequest.pagePath, html);
 
       request(this.server)
         .get('/')
         .set('Host', hostname)
-        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(devOptions)))
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(devOptions)) + '; _sandboxPage=1')
         .expect(200)
         .expect(function(res) {
           assert.equal(res.text, html);
@@ -156,11 +154,8 @@ describe('devSandbox()', function(){
       var html = '<html><head></head><body></body></html>';
       this.userId = '123';
 
-      var cacheKey = [
-        this.extendedRequest.virtualApp.appId,
-        this.userId,
-        self.extendedRequest.pageName
-      ].join(':');
+      var cacheKey = this.userId + '/' + this.extendedRequest.virtualApp.appId
+        + '/' + self.extendedRequest.pagePath;
 
       this.server.settings.cache.set(cacheKey, html);
       this.extendedRequest.sendJsonExtendedRequest = true;
