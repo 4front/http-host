@@ -53,6 +53,12 @@ describe('htmlPage', function() {
       .get('/docs/getting-started?fake=1')
       .expect(200)
       .expect('Virtual-App-Page', 'docs/getting-started.html')
+      .expect(function(res) {
+        assert.ok(self.server.settings.deployments.readFileStream.calledWith(
+          self.extendedRequest.virtualApp.appId,
+          self.extendedRequest.virtualAppVersion.versionId,
+          'docs/getting-started.html'));
+      })
       .end(done);
   });
 
