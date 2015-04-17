@@ -11,6 +11,9 @@ var async = require('async');
 var shortid = require('shortid');
 var crypto = require('crypto');
 var cookieParser = require('cookie-parser');
+var parseUrl = require('url').parse;
+var formatUrl = require('url').format;
+var querystring = require('querystring');
 var debug = require('debug')('4front-apphost:dev-sandbox-page');
 
 require('simple-errors');
@@ -28,7 +31,8 @@ describe('devSandbox()', function(){
 
     this.virtualApp = {
       name: 'test-app',
-      appId: shortid.generate()
+      appId: shortid.generate(),
+      url: 'https://myapp.apphost.com'
     };
 
     this.extendedRequest = {
@@ -78,7 +82,13 @@ describe('devSandbox()', function(){
           .expect(302)
           .expect('set-cookie', /_sandboxPage\=1/)
           .expect(function(res) {
-            assert.equal(res.headers.location, 'http://localhost:3000/index.html');
+            var redirectUrl = parseUrl(res.headers.location);
+
+            var redirectQuery = querystring.parse(redirectUrl.query);
+            assert.equal(redirectQuery.return, self.virtualApp.url + '/');
+
+            redirectUrl.search = null;
+            assert.equal(formatUrl(redirectUrl), 'http://localhost:3000/sandbox/index.html');
           })
           .end(cb);
       },
@@ -86,7 +96,7 @@ describe('devSandbox()', function(){
         // Have the localhost update the server with the contents of the file.
         var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.pagePath;
         self.cache.set(cacheKey, html);
-        self.cache.set(cacheKey + '/sha', getSha(html));
+        self.cache.set(cacheKey + '/hash', getHash(html));
         cb();
       },
       function(cb) {
@@ -102,26 +112,32 @@ describe('devSandbox()', function(){
     ], done);
   });
 
-  it('does not update page if sha value is the same', function(done) {
+  it('does not update page if hash is the same', function(done) {
     var html = loremIpsum();
 
     this.extendedRequest.pagePath = '/blog/page-one.html';
     var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/blog/page-one.html';
 
-    // Prime the cache with the page contents and SHA
+    // Prime the cache with the page contents and hash
     this.cache.set(cacheKey, html);
 
-    var sha = getSha(html);
-    this.cache.set(cacheKey + '/sha', sha);
+    var hash = getHash(html);
+    this.cache.set(cacheKey + '/hash', hash);
 
     async.series([
       function(cb) {
         supertest(self.server)
-          .get('/')
+          .get('/blog/page-one?test=1')
           .expect(302)
           .expect('set-cookie', /_sandboxPage\=1/)
           .expect(function(res) {
-            assert.equal(res.headers.location, 'http://localhost:3000/blog/page-one.html?_sha=' + sha);
+            var redirectUrl = parseUrl(res.headers.location);
+            var redirectQuerystring = querystring.parse(redirectUrl.query);
+            redirectUrl.search = null;
+
+            assert.equal(formatUrl(redirectUrl), 'http://localhost:3000/sandbox/blog/page-one.html');
+            assert.equal(redirectQuerystring.return, self.virtualApp.url + '/blog/page-one?test=1');
+            assert.equal(redirectQuerystring.hash, hash);
           })
           .end(cb);
       },
@@ -138,7 +154,7 @@ describe('devSandbox()', function(){
     ], done);
   });
 
-  function getSha(str) {
+  function getHash(str) {
     var shasum = crypto.createHash('sha1');
     shasum.update(str);
     return shasum.digest('hex');
