@@ -1,5 +1,6 @@
 
 var assert = require('assert');
+var sinon = require('sinon');
 var trafficControl = require('../lib/middleware/traffic-control');
 var querystring = require('querystring');
 var express = require('express');
@@ -14,7 +15,13 @@ describe('trafficControl()', function(){
   beforeEach(function(){
     var self = this;
 
-    server = express();
+    this.server = express();
+    this.server.settings.database = {
+      getVersion: sinon.spy(function(appId, versionId, callback) {
+        callback(null, {versionId: versionId, appId: appId, name: versionId});
+      })
+    };
+
     // self.trafficControlRules = [];
     this.extendedRequest = {
       virtualEnv: 'production',
@@ -28,33 +35,25 @@ describe('trafficControl()', function(){
       clientConfig: {}
     };
 
-    server.use(function(req, res, next) {
+    this.server.use(function(req, res, next) {
       req.ext = self.extendedRequest;
       next();
     });
 
-    server.use(require('cookie-parser')());
+    this.server.use(require('cookie-parser')());
 
-    this.trafficControlOptions = {
-      database: {
-        getVersionInfo: function(versionId, callback) {
-          callback(null, {versionId: versionId, name: versionId});
-        }
-      }
-    };
+    this.server.use(trafficControl());
 
-    server.use(trafficControl(self.trafficControlOptions));
-
-    server.use(function(req, res, next) {
+    this.server.use(function(req, res, next) {
       res.json(_.pick(req.ext, 'virtualAppVersion'));
     });
 
-    server.use(testUtil.errorHandler);
+    this.server.use(testUtil.errorHandler);
   });
 
   describe('passing _version querystring', function(){
     it('should set cookie and redirect', function(done){
-      request(server)
+      request(this.server)
         .get('/?_version=abc')
         .set('Host', 'testapp.platform.com')
         .expect(302)
@@ -75,7 +74,7 @@ describe('trafficControl()', function(){
 
   describe('when _version cookie', function() {
     it('should use that version', function(done) {
-      request(server)
+      request(this.server)
         .get('/')
         .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId:'1.1.1', method:'urlOverride'})))
         .expect(200)
@@ -87,7 +86,7 @@ describe('trafficControl()', function(){
 
   describe('when traffic control rules', function() {
     it('sends request to single version', function(done) {
-      request(server)
+      request(this.server)
         .get('/')
         .expect(200)
         .expect('Virtual-App-Version-Id', '1')
@@ -96,11 +95,11 @@ describe('trafficControl()', function(){
     });
 
     it('returns 404 if traffic control version is not valid', function(done) {
-      this.trafficControlOptions.database.getVersionInfo = function(versionId, callback) {
+      this.server.settings.database.getVersion = function(appId, versionId, callback) {
         callback(null, null);
       };
 
-      request(server)
+      request(this.server)
         .get('/')
         .expect(404)
         .expect('Error-Code', "versionNotFound")
@@ -111,7 +110,7 @@ describe('trafficControl()', function(){
   it("returns 404 when no traffic rules configured for environment", function(done) {
     this.extendedRequest.virtualApp.trafficRules.production = [];
 
-    request(server)
+    request(this.server)
       .get('/')
       .expect(404)
       .expect('Error-Code', "noTrafficRulesForEnvironment")
@@ -120,14 +119,14 @@ describe('trafficControl()', function(){
 
   describe('version in cookie does not exist', function() {
     it('falls back to traffic control rules', function(done) {
-      this.trafficControlOptions.database.getVersionInfo = function(versionId, callback) {
+      this.server.settings.database.getVersion = function(appId, versionId, callback) {
         if (versionId == '2')
           callback(null, null);
         else
           callback(null, {versionId: versionId});
       };
 
-      request(server)
+      request(this.server)
         .get('/')
         .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId: '2'})))
         .expect(200)
@@ -137,7 +136,7 @@ describe('trafficControl()', function(){
   });
 
   it('reverts to traffic rules if invalid JSON cookie', function(done) {
-    request(server)
+    request(this.server)
       .get('/')
       .set('Cookie', '_version=invalid_json')
       .expect(200)

@@ -35,7 +35,7 @@ describe('virtualAppLoader()', function(){
       })
     };
 
-    this.server.use(virtualAppLoader(self.virtualAppLoaderOptions));
+    this.server.use(virtualAppLoader());
 
     this.server.use(function(req, res, next) {
       res.json(_.pick(req.ext, 'virtualEnv', 'virtualApp', 'virtualHost', 'clientConfig', 'configSettings'));

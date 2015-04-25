@@ -1,7 +1,7 @@
 var express = require('express');
 var supertest = require('supertest');
 var _ = require('lodash');
-var dynamicRouter = require('../lib/middleware/virtual-router');
+var virtualRouter = require('../lib/middleware/virtual-router');
 var assert = require('assert');
 var path = require('path');
 var querystring = require('querystring');
@@ -11,6 +11,8 @@ describe('virtualRouter', function() {
   before(function() {
     var self = this;
     this.server = express();
+
+    this.server.settings.pluginsDir = path.join(__dirname, './fixtures/plugins');
 
     this.virtualApp = {
       name: 'test-app'
@@ -24,9 +26,7 @@ describe('virtualRouter', function() {
       next();
     });
 
-    this.server.use(dynamicRouter({
-      pluginsDir: path.join(__dirname, './fixtures/plugins')
-    }));
+    this.server.use(virtualRouter());
 
     this.server.use(function(req, res, next) {
       res.json(req.ext);
@@ -59,7 +59,7 @@ describe('virtualRouter', function() {
       }
     ];
 
-    supertest(this.server) 
+    supertest(this.server)
       .get('/')
       .expect(200)
       .expect(function(res) {
@@ -87,7 +87,7 @@ describe('virtualRouter', function() {
       }
     ];
 
-    supertest(this.server) 
+    supertest(this.server)
       .get('/foo')
       .expect(200)
       .expect(function(res) {

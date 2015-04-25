@@ -5,14 +5,14 @@ var sinon = require('sinon');
 var authenticated = require('../lib/middleware/authenticated');
 var _ = require('lodash');
 
-describe('authenticated()', function() {
+describe('authenticated', function() {
   var server;
 
   beforeEach(function() {
     server = express();
 
     this.user = null;
-    
+
     var self = this;
     this.user = {
       userId: '23524'
