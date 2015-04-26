@@ -18,9 +18,13 @@ describe('virtualRouter', function() {
       name: 'test-app'
     };
 
+    this.manifest = {};
     this.server.use(function(req, res, next) {
       req.ext = {
         virtualApp: self.virtualApp,
+        virtualAppVersion: {
+          manifest: self.manifest
+        },
         plugins: []
       };
       next();
@@ -42,15 +46,15 @@ describe('virtualRouter', function() {
   });
 
   it('invokes two plugins', function(done) {
-    this.virtualApp.router = [
+    this.manifest.router = [
       {
-        module: 'plugin::passthrough',
+        module: 'plugin:passthrough',
         options: {
           value: 1
         }
       },
       {
-        module: 'plugin::passthrough',
+        module: 'plugin:passthrough',
         path: '/',
         method: 'get',
         options: {
@@ -69,9 +73,9 @@ describe('virtualRouter', function() {
   });
 
   it('only plugins with matching route execute', function(done) {
-    this.virtualApp.router = [
+    this.manifest.router = [
       {
-        module: 'plugin::passthrough',
+        module: 'plugin:passthrough',
         options: {
           value: 1
         },
@@ -79,7 +83,7 @@ describe('virtualRouter', function() {
         method: 'get'
       },
       {
-        module: 'plugin::passthrough',
+        module: 'plugin:passthrough',
         options: {
           value: 2
         },
@@ -97,23 +101,23 @@ describe('virtualRouter', function() {
   });
 
   it('missing middleware function returns 501 response', function(done) {
-    this.virtualApp.router = [
+    this.manifest.router = [
       {
-        module: 'plugins::invalid'
+        module: 'plugins:invalid'
       }
     ];
 
     supertest(this.server)
       .get('/')
       .expect(501)
-      .expect(/Could not load the route module plugins::invalid/)
+      .expect(/Could not load the route module plugins:invalid/)
       .end(done);
   });
 
   it('returns 501 response for invalid method', function(done) {
-    this.virtualApp.router = [
+    this.manifest.router = [
       {
-        module: 'plugin::passthrough',
+        module: 'plugin:passthrough',
         path: '/',
         method: 'blah'
       }
@@ -122,21 +126,21 @@ describe('virtualRouter', function() {
     supertest(this.server)
       .get('/')
       .expect(501)
-      .expect(/Invalid method blah for virtual route plugin::passthrough/)
+      .expect(/Invalid method blah for virtual route plugin:passthrough/)
       .end(done);
   });
 
   it('plugin chain stops when next not invoked', function(done) {
-    this.virtualApp.router = [
+    this.manifest.router = [
       {
         path: '/text',
-        module: 'plugin::sendtext',
+        module: 'plugin:sendtext',
         options: {
           text: 'hello!'
         }
       },
       {
-        module: 'plugin::error',
+        module: 'plugin:error',
         path: '/',
         options: {
           message: 'error message'

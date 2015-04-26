@@ -1,5 +1,6 @@
 
 var assert = require('assert');
+var sinon = require('sinon');
 var memoryCache = require('memory-cache-stream');
 var devSandbox = require('../lib/middleware/dev-sandbox');
 var querystring = require('querystring');
@@ -8,7 +9,8 @@ var request = require('supertest');
 var _ = require('lodash');
 var debug = require('debug');
 var cookieParser = require('cookie-parser');
-var cheerio = require('cheerio');
+var shortid = require('shortid');
+var jwt = require('jwt-simple');
 var testUtil = require('./test-util');
 
 require('simple-errors');
@@ -20,17 +22,32 @@ describe('devSandbox()', function(){
   beforeEach(function(){
     self = this;
 
+    this.userId = shortid.generate();
+    this.virtualApp = {
+      name: 'test-app',
+      appId: '2awoifj48'
+    };
+
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
       pagePath: 'index.html',
-      virtualApp: {
-        name: 'test-app',
-        appId: '2awoifj48'
-      }
+      user: {
+        userId: this.userId
+      },
+      virtualApp: this.virtualApp
     };
 
     this.server = express();
+    this.server.settings.jwtTokenSecret = 'token_secret';
+
+    this.devOptions = {
+      port: 3000,
+      token: jwt.encode({
+        iss: this.userId,
+        exp: Date.now() + 10000
+      }, this.server.settings.jwtTokenSecret)
+    };
 
     this.server.use(function(req, res, next) {
       req.ext = self.extendedRequest;
@@ -40,7 +57,9 @@ describe('devSandbox()', function(){
     this.server.use(cookieParser());
 
     this.server.settings.cache = memoryCache();
-    this.server.settings.cache.set('foo', 'bar');
+    this.server.settings.cache.set(
+      this.userId + '/' + this.extendedRequest.virtualApp.appId + '/_manifest',
+      JSON.stringify({router:[]}));
 
     this.server.use(devSandbox({
       showBanner: true,
@@ -71,10 +90,6 @@ describe('devSandbox()', function(){
     this.server.use(testUtil.errorHandler);
   });
 
-  afterEach(function() {
-    this.server.settings.cache.flushall();
-  });
-
   describe('when request includes file extension', function() {
     it("should redirect to localhost", function(done) {
       request(this.server)
@@ -92,25 +107,22 @@ describe('devSandbox()', function(){
         .get('/')
         .set('Host', hostname)
         .expect(400)
-        .expect(/No user parameter found/, done);
+        .expect(/Invalid _dev cookie/, done);
     });
   });
 
   describe('when dev environment and devparams', function() {
     it('should redirect without devparams and set cookie', function(done) {
-      var devOptions = {port:'3000', user:'43534534'};
       request(this.server)
-        .get('/foo?_dev=' + encodeURIComponent(querystring.stringify(devOptions)))
+        .get('/foo?_dev=' + encodeURIComponent(querystring.stringify(this.devOptions)))
         .set('Host', hostname)
         .expect(302)
         .expect('location', '/foo')
         .expect(function(res) {
           var setCookieHeader = res.headers['set-cookie'];
           assert.equal(1, setCookieHeader.length);
-          var setCookieMatch = setCookieHeader[0].match(/_dev=(j[A-Z0-9%]+)/i);
-
-          assert.equal(setCookieMatch.length, 2);
-          assert.ok(_.isEqual(cookieParser.JSONCookie(decodeURIComponent(setCookieMatch[1])), devOptions));
+          var setCookie = querystring.parse(setCookieHeader[0]);
+          assert.deepEqual(cookieParser.JSONCookie(setCookie._dev.split(';')[0]), self.devOptions);
         })
         .end(done);
     });
@@ -120,7 +132,7 @@ describe('devSandbox()', function(){
     it('should return an error', function(done) {
       request(this.server)
         .get('/')
-        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"4534435"}') + '; _sandboxPage=1')
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(self.devOptions)) + '; _sandboxPage=1')
         .set('Host', hostname)
         .expect(404)
         .expect('Error-Code', 'pageNotFound')
@@ -130,20 +142,32 @@ describe('devSandbox()', function(){
 
   describe('when dev environment and _dev cookie', function() {
     it('should return html', function(done) {
-      var devOptions = {user: '34534345'};
-
       // Put some html into the cache with the correct key
       var html = '<html></html>';
-      this.server.settings.cache.set(devOptions.user + '/' + this.extendedRequest.virtualApp.appId + '/' + self.extendedRequest.pagePath, html);
+      this.server.settings.cache.set(this.userId + '/' + this.extendedRequest.virtualApp.appId + '/' + self.extendedRequest.pagePath, html);
 
       request(this.server)
         .get('/')
         .set('Host', hostname)
-        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(devOptions)) + '; _sandboxPage=1')
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)) + '; _sandboxPage=1')
         .expect(200)
         .expect(function(res) {
           assert.equal(res.text, html);
         })
+        .end(done);
+    });
+
+    it('jwt is expired returns 400', function(done) {
+      this.devOptions.token = jwt.encode({
+        iss: this.userId,
+        exp: Date.now() - 10000
+      }, this.server.settings.jwtTokenSecret);
+
+      request(this.server)
+        .get('/')
+        .set('Host', hostname)
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)) + '; _sandboxPage=1')
+        .expect(401)
         .end(done);
     });
   });
@@ -152,7 +176,6 @@ describe('devSandbox()', function(){
     beforeEach(function() {
       // Put some html into the cache with the correct key
       var html = '<html><head></head><body></body></html>';
-      this.userId = '123';
 
       var cacheKey = this.userId + '/' + this.extendedRequest.virtualApp.appId
         + '/' + self.extendedRequest.pagePath;
@@ -165,7 +188,7 @@ describe('devSandbox()', function(){
       request(this.server)
         .get('/')
         .set('Host', hostname)
-        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)))
         .expect(200)
         .expect(function(res) {
           assert.ok(res.body.htmlOptions.inject.head.indexOf('<style>body::after{background-image:url') > -1);
@@ -177,10 +200,10 @@ describe('devSandbox()', function(){
       request(this.server)
         .get('/')
         .set('Host', hostname)
-        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)))
         .expect(200)
         .expect(function(res) {
-          assert.equal(res.body.clientConfig.simulator, true);
+          assert.equal(res.body.clientConfig.sandbox, true);
           assert.equal(res.body.buildType, 'debug');
           assert.equal(res.body.versionAssetPath, '//localhost:3000');
         })
@@ -191,11 +214,25 @@ describe('devSandbox()', function(){
       request(this.server)
         .get('/')
         .set('Host', hostname)
-        .set('Cookie', '_dev=' + encodeURIComponent('j:{"user":"123"}'))
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)))
         .expect(200)
         .expect(function(res) {
           assert.ok(res.body.htmlOptions.liveReload);
         })
+        .end(done);
+    });
+  });
+
+  describe('manifest', function() {
+    it('manifest missing from cache', function(done) {
+      this.server.settings.cache.del(this.userId + '/' + this.virtualApp.appId + '/_manifest');
+
+      request(this.server)
+        .get('/')
+        .set('Host', hostname)
+        .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)))
+        .expect(400)
+        .expect('Error-Code', 'invalidJsonManifest')
         .end(done);
     });
   });

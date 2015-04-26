@@ -37,6 +37,7 @@
     "ejs": "^2.3.1",
     "express-session": "^1.10.3",
     "htmlprep": "^1.0.10",
+    "jwt-simple": "^0.3.0",
     "lodash": "^3.0.1",
     "memory-cache-stream": "^1.0.2",
     "redis-streams": "^1.0.3",
