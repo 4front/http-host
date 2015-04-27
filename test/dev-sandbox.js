@@ -31,7 +31,7 @@ describe('devSandbox()', function(){
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
-      pagePath: 'index.html',
+      htmlPagePath: 'index.html',
       user: {
         userId: this.userId
       },
@@ -77,7 +77,7 @@ describe('devSandbox()', function(){
         res.set('Content-Type', 'text/html');
 
         var dataRead = false;
-        req.ext.pagePath = 'index.html';
+        req.ext.htmlPagePath = 'index.html';
         req.ext.loadPageMiddleware(req, res, function(err) {
           if (_.isError(err))
             return next(err);
@@ -144,7 +144,7 @@ describe('devSandbox()', function(){
     it('should return html', function(done) {
       // Put some html into the cache with the correct key
       var html = '<html></html>';
-      this.server.settings.cache.set(this.userId + '/' + this.extendedRequest.virtualApp.appId + '/' + self.extendedRequest.pagePath, html);
+      this.server.settings.cache.set(this.userId + '/' + this.extendedRequest.virtualApp.appId + '/' + self.extendedRequest.htmlPagePath, html);
 
       request(this.server)
         .get('/')
@@ -178,7 +178,7 @@ describe('devSandbox()', function(){
       var html = '<html><head></head><body></body></html>';
 
       var cacheKey = this.userId + '/' + this.extendedRequest.virtualApp.appId
-        + '/' + self.extendedRequest.pagePath;
+        + '/' + self.extendedRequest.htmlPagePath;
 
       this.server.settings.cache.set(cacheKey, html);
       this.extendedRequest.sendJsonExtendedRequest = true;

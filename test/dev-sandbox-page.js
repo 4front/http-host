@@ -38,7 +38,7 @@ describe('devSandbox()', function(){
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
-      pagePath: 'index.html',
+      htmlPagePath: 'index.html',
       user: this.user,
       virtualApp: this.virtualApp
     };
@@ -94,7 +94,7 @@ describe('devSandbox()', function(){
       },
       function(cb) {
         // Have the localhost update the server with the contents of the file.
-        var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.pagePath;
+        var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.htmlPagePath;
         self.cache.set(cacheKey, html);
         self.cache.set(cacheKey + '/hash', getHash(html));
         cb();
@@ -115,7 +115,7 @@ describe('devSandbox()', function(){
   it('does not update page if hash is the same', function(done) {
     var html = loremIpsum();
 
-    this.extendedRequest.pagePath = '/blog/page-one.html';
+    this.extendedRequest.htmlPagePath = '/blog/page-one.html';
     var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/blog/page-one.html';
 
     // Prime the cache with the page contents and hash
