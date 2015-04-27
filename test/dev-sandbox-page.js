@@ -72,23 +72,25 @@ describe('devSandbox()', function(){
   });
 
   it('loads page', function(done) {
-    var html = "<html>page</html>";
+    var html = "<html>somepage</html>";
+    this.extendedRequest.htmlPagePath = 'somepage.html';
 
     async.series([
       function(cb) {
         // Make the original request for the page
         supertest(self.server)
-          .get('/')
+          .get('/somepage')
           .expect(302)
           .expect('set-cookie', /_sandboxPage\=1/)
           .expect(function(res) {
             var redirectUrl = parseUrl(res.headers.location);
 
             var redirectQuery = querystring.parse(redirectUrl.query);
-            assert.equal(redirectQuery.return, self.virtualApp.url + '/');
+            var returnUrl = parseUrl(redirectQuery.return);
+            assert.equal(returnUrl.pathname, '/somepage');
 
             redirectUrl.search = null;
-            assert.equal(formatUrl(redirectUrl), 'http://localhost:3000/sandbox/index.html');
+            assert.equal(formatUrl(redirectUrl), 'http://localhost:3000/sandbox/somepage.html');
           })
           .end(cb);
       },
@@ -136,7 +138,7 @@ describe('devSandbox()', function(){
             redirectUrl.search = null;
 
             assert.equal(formatUrl(redirectUrl), 'http://localhost:3000/sandbox/blog/page-one.html');
-            assert.equal(redirectQuerystring.return, self.virtualApp.url + '/blog/page-one?test=1');
+            assert.equal(parseUrl(redirectQuerystring.return).path, '/blog/page-one?test=1');
             assert.equal(redirectQuerystring.hash, hash);
           })
           .end(cb);
