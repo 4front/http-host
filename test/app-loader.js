@@ -67,12 +67,14 @@ describe('virtualAppLoader()', function(){
     });
 
     it('should default to prod when no env found', function(done){
+      this.server.settings.defaultVirtualEnvironment = 'staging';
+
       request(this.server)
         .get('/')
         .set('Host', 'appname.testapps.com')
         .expect(200)
         .expect(function(res) {
-          assert.equal(res.body.virtualEnv, 'prod');
+          assert.equal(res.body.virtualEnv, self.server.settings.defaultVirtualEnvironment);
           assert.equal(res.body.virtualHost, 'appname.testapps.com');
         })
         .end(done);
