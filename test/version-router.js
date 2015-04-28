@@ -4,9 +4,8 @@ var router = require('../lib/version-router');
 describe('versionRouter', function() {
   it('honors fixed version', function() {
     var rules= [
-      {version:'1', rule:'fixed'},
+      {version:'1', rule:'*'},
       {version:'2', rule:'random', args:0.5},
-      {version:'3', rule:'fixed'},
     ];
 
     assert.equal(router(rules), '1');
