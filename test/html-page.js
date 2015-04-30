@@ -4,6 +4,7 @@ var express = require('express');
 var shortid = require('shortid');
 var stream = require('stream');
 var supertest = require('supertest');
+var urljoin = require('url-join');
 var sbuff = require('simple-bufferstream');
 var testUtil = require('./test-util');
 var htmlPage = require('../lib/middleware/html-page');
@@ -17,6 +18,8 @@ describe('htmlPage', function() {
     this.html = '<html><head><title>test page</title></head><body><div></div></body></html>';
 
     this.server = express();
+
+    this.server.settings.staticAssetPath = 'http://assethost.com/deployments';
     this.server.settings.deployments = {
       readFileStream: sinon.spy(function(appId, versionId, pagePath) {
         return sbuff(self.html);
@@ -195,7 +198,10 @@ describe('htmlPage', function() {
           assert.equal(clientConfig.buildType, 'release');
           assert.equal(clientConfig.pagePath, 'index.html');
 
-          assert.equal(clientConfig.assetPath, self.options.assetPath + '/' + version.versionId);
+          assert.equal(clientConfig.staticAssetPath, urljoin(
+            self.server.settings.staticAssetPath,
+            self.extendedRequest.virtualApp.appId,
+            version.versionId));
         })
         .end(done);
     });
@@ -212,26 +218,25 @@ describe('htmlPage', function() {
 
     it('rewrites asset URLs for CDN', function(done) {
       var appId = self.extendedRequest.virtualApp.appId;
-      self.options.assetPath = '//mycdn.com/';
 
       supertest(this.server)
         .get('/')
         .expect(200)
         .expect(function(res) {
-          var scriptUrl = '//mycdn.com/' + appId + '/123/js/main.js';
+          var scriptUrl = urljoin(self.server.settings.staticAssetPath, appId, '/123/js/main.js');
           assert.ok(res.text.indexOf(scriptUrl) !== -1);
         })
         .end(done);
     });
 
     it('rewrites asset URLs for relative', function(done) {
-      self.options.assetPath = '/static/';
+      self.server.settings.staticAssetPath = '/static';
 
       supertest(this.server)
         .get('/')
         .expect(200)
         .expect(function(res) {
-          var scriptUrl = '/static/123/js/main.js';
+          var scriptUrl = '/static/' + self.extendedRequest.virtualApp.appId + '/123/js/main.js';
           assert.ok(res.text.indexOf(scriptUrl) !== -1);
         })
         .end(done);
@@ -295,7 +300,7 @@ describe('htmlPage', function() {
       .expect(200)
       .expect(function(res) {
         var customHeadIndex = res.text.indexOf(self.extendedRequest.htmlOptions.inject.head);
-        var clientConfigIndex = res.text.indexOf('__config__=');
+        var clientConfigIndex = res.text.indexOf('__4front__=');
 
         assert.ok(customHeadIndex !== -1);
         assert.ok(clientConfigIndex !== -1);
@@ -306,15 +311,14 @@ describe('htmlPage', function() {
 
   it('extends htmlOptions from req.ext.htmlOptions', function(done) {
     this.extendedRequest.htmlOptions = {
-      liveReload: true,
-      liveReloadPort: 35728
+      liveReload: true
     };
 
     supertest(this.server)
       .get('/')
       .expect(200)
       .expect(function(res) {
-        assert.ok(res.text.indexOf('//localhost:35728/livereload.js') > -1);
+        assert.ok(res.text.indexOf('/livereload') > -1);
       })
       .end(done);
   });
@@ -331,5 +335,5 @@ function createErrorStream() {
 }
 
 function parseClientConfig(text) {
-  return JSON.parse(text.match('__config__=(.*);')[1]);
+  return JSON.parse(text.match('__4front__=(.*);')[1]);
 }

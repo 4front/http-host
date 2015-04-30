@@ -64,8 +64,7 @@ describe('devSandbox()', function(){
     this.server.use(devSandbox({
       showBanner: true,
       port: 3000,
-      liveReload: true,
-      liveReloadPort: 35728
+      liveReload: true
     }));
 
     this.server.use(function(req, res, next) {
@@ -217,7 +216,7 @@ describe('devSandbox()', function(){
         .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)))
         .expect(200)
         .expect(function(res) {
-          assert.ok(res.body.htmlOptions.liveReload);
+          assert.ok(/livereload/.test(res.body.htmlOptions.inject.body));
         })
         .end(done);
     });
