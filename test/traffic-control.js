@@ -28,7 +28,7 @@ describe('trafficControl()', function(){
       virtualApp: {
         trafficRules: {
           production: [
-            {rule: '*', version:'1'}
+            {rule: '*', versionId:'1'}
           ]
         }
       },
