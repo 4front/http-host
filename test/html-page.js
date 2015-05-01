@@ -289,9 +289,10 @@ describe('htmlPage', function() {
   });
 
   it('merges html blocks', function(done) {
+    var customScript = "<script src='custom-head.js'></script>";
     this.extendedRequest.htmlOptions = {
       inject: {
-        head: "<script src='custom-head.js'></script>"
+        head: customScript
       }
     };
 
@@ -299,7 +300,8 @@ describe('htmlPage', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        var customHeadIndex = res.text.indexOf(self.extendedRequest.htmlOptions.inject.head);
+        console.log(res.text);
+        var customHeadIndex = res.text.indexOf(customScript);
         var clientConfigIndex = res.text.indexOf('__4front__=');
 
         assert.ok(customHeadIndex !== -1);
