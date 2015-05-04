@@ -13,6 +13,7 @@ var shortid = require('shortid');
 var jwt = require('jwt-simple');
 var testUtil = require('./test-util');
 
+require('dash-assert');
 require('simple-errors');
 
 describe('devSandbox()', function(){
@@ -43,6 +44,7 @@ describe('devSandbox()', function(){
 
     this.devOptions = {
       port: 3000,
+      liveReload: '1',
       token: jwt.encode({
         iss: this.userId,
         exp: Date.now() + 10000
@@ -216,7 +218,7 @@ describe('devSandbox()', function(){
         .set('Cookie', '_dev=' + encodeURIComponent('j:' + JSON.stringify(this.devOptions)))
         .expect(200)
         .expect(function(res) {
-          assert.ok(/livereload/.test(res.body.htmlOptions.inject.body));
+          assert.isTrue(res.body.htmlOptions.liveReload);
         })
         .end(done);
     });
