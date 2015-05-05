@@ -25,20 +25,23 @@ describe('virtualAppLoader()', function(){
     });
 
     this.appId = shortid.generate();
+    this.env = {};
+
     this.server.settings.virtualHost = 'testapps.com';
     this.server.settings.virtualAppRegistry = {
       getByName: sinon.spy(function(name, callback) {
         callback(null, {
           appId: self.appId,
-          name: name
-        })
+          name: name,
+          env: self.env
+        });
       })
     };
 
     this.server.use(virtualAppLoader());
 
     this.server.use(function(req, res, next) {
-      res.json(_.pick(req.ext, 'virtualEnv', 'virtualApp', 'virtualHost', 'clientConfig', 'configSettings'));
+      res.json(_.pick(req.ext, 'virtualEnv', 'virtualApp', 'virtualHost', 'clientConfig', 'env'));
     });
 
     this.server.use(function(err, req, res, next) {
@@ -130,77 +133,54 @@ describe('virtualAppLoader()', function(){
     });
   });
 
-  // describe('virtual app config settings', function() {
-  //   beforeEach(function() {
-  //     this.configSettings = {
-  //       _default: {
-  //         setting1: {value: 'foo', sendToClient: true},
-  //         apiKey: {envVariable: 'API_KEY'}
-  //       }
-  //     };
+  describe('environment variables', function() {
+    beforeEach(function() {
+      this.server.settings.defaultVirtualEnvironment = 'production';
 
-  //     var self = this;
-  //     this.virtualAppLoaderOptions.findAppFn = function(query, callback) {
-  //       callback(null, { configSettings: self.configSettings });
-  //     };
+      _.extend(this.env, {
+        _global: {
+          key1: 'global_key1',
+          key2: 'global_key2'
+        },
+        test: {
+          key1: 'test_key1'
+        },
+        production: {
+          key2: 'production_key2'
+        }
+      });
+    });
 
-  //     this.envVariables = {
-  //       API_KEY: "api-key"
-  //     };
+    it('works for test env', function(done) {
+      request(this.server)
+        .get('/')
+        .set('Host', 'appname--test.testapps.com')
+        .expect(200)
+        .expect(function(res) {
+          assert.equal(res.body.virtualEnv, 'test');
+          assert.deepEqual(res.body.env, {
+            key1: 'test_key1',
+            key2: 'global_key2'
+          });
 
-  //     this.virtualAppLoaderOptions.envVariable = function(virtualApp, key) {
-  //       return self.envVariables[key];
-  //     }
-  //   });
+          assert.isUndefined(res.body.virtualApp.env);
+        })
+        .end(done);
+    });
 
-  //   it('should load settings', function(done) {
-  //     request(server)
-  //       .get('/path')
-  //       .set('Host', 'appname.testapps.com')
-  //       .expect(200)
-  //       .expect(function(res) {
-  //         var configSettings = JSON.parse(res.text).configSettings;
-  //         assert.equal(configSettings.setting1, 'foo');
-  //         assert.equal(configSettings.apiKey, 'api-key');
-  //       })
-  //       .end(done);
-  //   });
-
-  //   it('should override default with environment specific value', function(done) {
-  //     this.configSettings['test'] = {
-  //       setting1: {value: 'test-foo'}
-  //     };
-
-  //     request(server)
-  //       .get('/path')
-  //       .set('Host', 'appname--test.testapps.com')
-  //       .expect(200)
-  //       .expect(function(res) {
-  //         var configSettings = JSON.parse(res.text).configSettings;
-  //         assert.equal(configSettings.setting1, 'test-foo');
-  //       })
-  //       .end(done);
-  //   });
-
-  //   it('should only add to clientConfig settings where sendToClient===true', function(done) {
-  //     this.configSettings = {
-  //       _default: {
-  //         setting1: {value:'foo', sendToClient:true},
-  //         setting2: {value:'bar'}
-  //       }
-  //     };
-
-  //     request(server)
-  //       .get('/path')
-  //       .set('Host', 'appname.testapps.com')
-  //       .expect(200)
-  //       .expect(function(res) {
-  //         var clientSettings = JSON.parse(res.text).clientConfig.settings;
-  //         debugger;
-  //         assert.equal(clientSettings.setting1, 'foo');
-  //         assert.ok(_.isUndefined(clientSettings.setting2));
-  //       })
-  //       .end(done);
-  //   });
-  // });
+    it('works for default virtual env', function(done) {
+      request(this.server)
+        .get('/')
+        .set('Host', 'appname.testapps.com')
+        .expect(200)
+        .expect(function(res) {
+          assert.equal(res.body.virtualEnv, 'production');
+          assert.deepEqual(res.body.env, {
+            key1: 'global_key1',
+            key2: 'production_key2'
+          });
+        })
+        .end(done);
+    });
+  });
 });

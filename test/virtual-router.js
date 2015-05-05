@@ -18,6 +18,8 @@ describe('virtualRouter', function() {
       name: 'test-app'
     };
 
+    this.env = {};
+
     this.manifest = {};
     this.server.use(function(req, res, next) {
       req.ext = {
@@ -25,6 +27,7 @@ describe('virtualRouter', function() {
         virtualAppVersion: {
           manifest: self.manifest
         },
+        env: self.env,
         plugins: []
       };
       next();
@@ -154,5 +157,60 @@ describe('virtualRouter', function() {
       .expect('Content-Type', /^text\/plain/)
       .expect('hello!')
       .end(done);
+  });
+
+  describe('environment variable substitution', function() {
+    beforeEach(function() {
+      this.env.KEY1 = "key1_value";
+      this.env.KEY2 = "key2_value";
+    });
+
+    it('substitutes values correctly', function(done) {
+      this.manifest.router = [
+        {
+          module: 'plugin:echo-options',
+          options: {
+            option1: "${KEY1}",
+            another: 'foo',
+            more: {
+              option2: "${KEY2}"
+            }
+          },
+          path: '/options'
+        }
+      ];
+
+      supertest(this.server)
+        .get('/options')
+        .expect(200)
+        .expect(function(res) {
+          assert.deepEqual(res.body, {
+            option1: "key1_value",
+            another: 'foo',
+            more: {
+              option2: "key2_value"
+            }
+          });
+        })
+        .end(done);
+    });
+
+    it('throws error for missing environment variable', function(done) {
+      this.manifest.router = [
+        {
+          module: 'plugin:echo-options',
+          options: {
+            option1: "${MISSING}",
+          },
+          path: '/options'
+        }
+      ];
+
+      supertest(this.server)
+        .get('/options')
+        .expect(400)
+        .expect(/Invalid environment variable MISSING/)
+        .end(done);
+    });
   });
 });
