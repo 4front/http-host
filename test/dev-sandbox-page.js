@@ -98,7 +98,7 @@ describe('devSandbox()', function(){
         // Have the localhost update the server with the contents of the file.
         var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.htmlPagePath;
         self.cache.set(cacheKey, html);
-        self.cache.set(cacheKey + '/hash', getHash(html));
+        self.cache.set(cacheKey + '/mtime', new Date().getTime().toString());
         cb();
       },
       function(cb) {
@@ -114,7 +114,7 @@ describe('devSandbox()', function(){
     ], done);
   });
 
-  it('does not update page if hash is the same', function(done) {
+  it('does not update page if lastModified is the same', function(done) {
     var html = loremIpsum();
 
     this.extendedRequest.htmlPagePath = '/blog/page-one.html';
@@ -123,8 +123,9 @@ describe('devSandbox()', function(){
     // Prime the cache with the page contents and hash
     this.cache.set(cacheKey, html);
 
-    var hash = getHash(html);
-    this.cache.set(cacheKey + '/hash', hash);
+    var lastModified = new Date().getTime().toString();
+
+    this.cache.set(cacheKey + '/mtime', lastModified);
 
     async.series([
       function(cb) {
@@ -139,7 +140,7 @@ describe('devSandbox()', function(){
 
             assert.equal(formatUrl(redirectUrl), 'http://localhost:3000/sandbox/blog/page-one.html');
             assert.equal(parseUrl(redirectQuerystring.return).path, '/blog/page-one?test=1');
-            assert.equal(redirectQuerystring.hash, hash);
+            assert.equal(redirectQuerystring.mtime, lastModified);
           })
           .end(cb);
       },
@@ -156,9 +157,9 @@ describe('devSandbox()', function(){
     ], done);
   });
 
-  function getHash(str) {
-    var shasum = crypto.createHash('sha1');
-    shasum.update(str);
-    return shasum.digest('hex');
-  }
+  // function getHash(str) {
+  //   var shasum = crypto.createHash('sha1');
+  //   shasum.update(str);
+  //   return shasum.digest('hex');
+  // }
 });
