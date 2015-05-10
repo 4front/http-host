@@ -6,6 +6,7 @@ var devSandbox = require('../lib/middleware/dev-sandbox');
 var querystring = require('querystring');
 var express = require('express');
 var request = require('supertest');
+var urljoin = require('url-join');
 var _ = require('lodash');
 var debug = require('debug');
 var cookieParser = require('cookie-parser');
@@ -32,7 +33,7 @@ describe('devSandbox()', function(){
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
-      htmlPagePath: 'index.html',
+      pagePath: 'index.html',
       user: {
         userId: this.userId
       },
@@ -78,12 +79,12 @@ describe('devSandbox()', function(){
         res.set('Content-Type', 'text/html');
 
         var dataRead = false;
-        req.ext.htmlPagePath = 'index.html';
+        req.ext.pagePath = 'index.html';
         req.ext.loadPageMiddleware(req, res, function(err) {
           if (_.isError(err))
             return next(err);
 
-          req.ext.htmlPageStream.pipe(res);
+          req.ext.pageStream.pipe(res);
         });
       }
     });
@@ -145,7 +146,9 @@ describe('devSandbox()', function(){
     it('should return html', function(done) {
       // Put some html into the cache with the correct key
       var html = '<html></html>';
-      this.server.settings.cache.set(this.userId + '/' + this.extendedRequest.virtualApp.appId + '/' + self.extendedRequest.htmlPagePath, html);
+      this.server.settings.cache.set(urljoin(this.userId,
+        this.extendedRequest.virtualApp.appId,
+        self.extendedRequest.pagePath), html);
 
       request(this.server)
         .get('/')
@@ -178,8 +181,9 @@ describe('devSandbox()', function(){
       // Put some html into the cache with the correct key
       var html = '<html><head></head><body></body></html>';
 
-      var cacheKey = this.userId + '/' + this.extendedRequest.virtualApp.appId
-        + '/' + self.extendedRequest.htmlPagePath;
+      var cacheKey = urljoin(this.userId,
+        this.extendedRequest.virtualApp.appId,
+        self.extendedRequest.pagePath);
 
       this.server.settings.cache.set(cacheKey, html);
       this.extendedRequest.sendJsonExtendedRequest = true;

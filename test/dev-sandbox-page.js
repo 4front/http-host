@@ -39,7 +39,7 @@ describe('devSandbox()', function(){
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
-      htmlPagePath: 'index.html',
+      pagePath: 'index.html',
       user: this.user,
       virtualApp: this.virtualApp
     };
@@ -60,7 +60,7 @@ describe('devSandbox()', function(){
 
     this.server.use(function(req, res, next) {
       // Pipe the page to the response
-      req.ext.htmlPageStream.pipe(res);
+      req.ext.pageStream.pipe(res);
     });
 
     this.server.use(function(err, req, res, next) {
@@ -74,7 +74,7 @@ describe('devSandbox()', function(){
 
   it('loads page', function(done) {
     var html = "<html>somepage</html>";
-    this.extendedRequest.htmlPagePath = 'somepage.html';
+    this.extendedRequest.pagePath = 'somepage.html';
 
     async.series([
       function(cb) {
@@ -88,6 +88,7 @@ describe('devSandbox()', function(){
 
             var redirectQuery = querystring.parse(redirectUrl.query);
             var returnUrl = parseUrl(redirectQuery.return);
+            console.log(returnUrl);
             assert.equal(returnUrl.pathname, '/somepage');
 
             redirectUrl.search = null;
@@ -97,7 +98,7 @@ describe('devSandbox()', function(){
       },
       function(cb) {
         // Have the localhost update the server with the contents of the file.
-        var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.htmlPagePath;
+        var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.pagePath;
 
         self.cache.set(cacheKey, html);
         self.cache.set(cacheKey + '/hash', helper.hashString(html));
@@ -120,7 +121,7 @@ describe('devSandbox()', function(){
   it('does not update page if hash is the same', function(done) {
     var html = loremIpsum();
 
-    this.extendedRequest.htmlPagePath = '/blog/page-one.html';
+    this.extendedRequest.pagePath = '/blog/page-one.html';
     var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/blog/page-one.html';
 
     // Prime the cache with the page contents and hash

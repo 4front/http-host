@@ -170,10 +170,10 @@ describe('virtualRouter', function() {
         {
           module: 'plugin:echo-options',
           options: {
-            option1: "${KEY1}",
+            option1: "env:KEY1",
             another: 'foo',
             more: {
-              option2: "${KEY2}"
+              option2: "env:KEY2"
             }
           },
           path: '/options'
@@ -200,7 +200,7 @@ describe('virtualRouter', function() {
         {
           module: 'plugin:echo-options',
           options: {
-            option1: "${MISSING}",
+            option1: "env:MISSING",
           },
           path: '/options'
         }
@@ -210,6 +210,26 @@ describe('virtualRouter', function() {
         .get('/options')
         .expect(400)
         .expect(/Invalid environment variable MISSING/)
+        .end(done);
+    });
+  });
+
+  describe('regex expansion', function() {
+    it('expands regex', function(done) {
+      this.manifest.router = [
+        {
+          module: 'plugin:echo-options',
+          options: {
+            option1: "regex:/\\",
+          },
+          path: '/options'
+        }
+      ];
+
+      supertest(this.server)
+        .get('/options')
+        .expect(400)
+        .expect(/Invalid RegExp/)
         .end(done);
     });
   });

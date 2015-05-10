@@ -7,22 +7,22 @@ var supertest = require('supertest');
 var urljoin = require('url-join');
 var sbuff = require('simple-bufferstream');
 var testUtil = require('./test-util');
-var htmlPage = require('../lib/middleware/html-page');
+var webPage = require('../lib/middleware/webpage');
 
 var self;
-describe('htmlPage', function() {
+describe('webPage', function() {
 
   beforeEach(function() {
     self = this;
 
-    this.html = '<html><head><title>test page</title></head><body><div></div></body></html>';
+    this.pageContent = '<html><head><title>test page</title></head><body><div></div></body></html>';
 
     this.server = express();
 
     this.server.settings.staticAssetPath = 'http://assethost.com/deployments';
     this.server.settings.deployments = {
       readFileStream: sinon.spy(function(appId, versionId, pagePath) {
-        return sbuff(self.html);
+        return sbuff(self.pageContent);
       })
     };
 
@@ -46,7 +46,11 @@ describe('htmlPage', function() {
 
     this.options = {};
 
-    this.server.get('/*', htmlPage(this.options));
+    this.server.get('/*', webPage(this.options));
+
+    this.server.all('*', function(req, res, next) {
+      next(Error.http(404, "Page not found", {code: "pageNotFound"}));
+    });
 
     this.server.use(testUtil.errorHandler);
   });
@@ -209,8 +213,9 @@ describe('htmlPage', function() {
 
   describe('asset URLs', function() {
     beforeEach(function() {
-      self.html = '<html><head></head><body><script src="js/main.js"></script></html>';
+      self.pageContent = '<html><head></head><body><script src="js/main.js"></script></html>';
 
+      this.options.htmlprep = true;
       this.extendedRequest.virtualAppVersion = {
         versionId: '123'
       };
@@ -236,6 +241,7 @@ describe('htmlPage', function() {
         .get('/')
         .expect(200)
         .expect(function(res) {
+          debugger;
           var scriptUrl = '/static/' + self.extendedRequest.virtualApp.appId + '/123/js/main.js';
           assert.ok(res.text.indexOf(scriptUrl) !== -1);
         })
@@ -300,7 +306,6 @@ describe('htmlPage', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        console.log(res.text);
         var customHeadIndex = res.text.indexOf(customScript);
         var clientConfigIndex = res.text.indexOf('__4front__=');
 
@@ -323,6 +328,27 @@ describe('htmlPage', function() {
         assert.ok(res.text.indexOf('/livereload') > -1);
       })
       .end(done);
+  });
+
+  describe('non html pages', function() {
+    it('renders a sitemap.xml', function(done) {
+      this.pageContent = '<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
+      this.options.contentType = 'application/xml';
+
+      supertest(this.server)
+        .get('/sitemap.xml')
+        .expect(200)
+        .expect('Content-Type', 'application/xml')
+        .expect(function(res) {
+          assert.ok(self.server.settings.deployments.readFileStream.calledWith(
+            self.extendedRequest.virtualApp.appId,
+            self.extendedRequest.virtualAppVersion.versionId,
+            'sitemap.xml'));
+
+          assert.equal(res.text, self.pageContent);
+        })
+        .end(done);
+    });
   });
 });
 
