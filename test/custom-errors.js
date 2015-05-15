@@ -1,4 +1,5 @@
 var express = require('express');
+var urljoin = require('url-join');
 var supertest = require('supertest');
 var _ = require('lodash');
 var assert = require('assert');
@@ -16,8 +17,8 @@ describe('customErrors', function() {
     self = this;
 
     this.server = express();
-    this.server.settings.deployments = {
-      readFileStream: sinon.spy(function(appId, versionId, pageName) {
+    this.server.settings.storage = {
+      readFileStream: sinon.spy(function(pathPath) {
         return sbuff("<html>custom error</html>");
       })
     };
@@ -85,8 +86,11 @@ describe('customErrors', function() {
       .expect('Error-Code', 'testError')
       .expect("<html>custom error</html>")
       .expect(function(res) {
-        assert.ok(self.server.settings.deployments.readFileStream.calledWith(
-          self.virtualApp.appId, self.virtualAppVersion.versionId, '500.html'));
+        assert.ok(self.server.settings.storage.readFileStream.calledWith(
+          urljoin(self.virtualApp.appId,
+            self.virtualAppVersion.versionId,
+            '500.html')));
+
         assert.ok(self.server.settings.logger.error.called);
       })
       .end(done);
@@ -127,7 +131,7 @@ describe('customErrors', function() {
   });
 
   it('advances to fallback if page stream missing', function(done) {
-    this.server.settings.deployments.readFileStream = function() {
+    this.server.settings.storage.readFileStream = function(filePath) {
       return testUtil.createMissingStream();
     };
 
@@ -141,7 +145,7 @@ describe('customErrors', function() {
   it('uses override loadPageMiddleware', function(done) {
     this.updateRequest = function(req) {
       req.ext.loadPageMiddleware = function(req, res, next) {
-        req.ext.htmlPageStream = sbuff("<html>special</html>");
+        req.ext.webPageStream = sbuff("<html>special</html>");
         next();
       };
     };

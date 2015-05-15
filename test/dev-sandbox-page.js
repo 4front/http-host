@@ -60,7 +60,7 @@ describe('devSandbox()', function(){
 
     this.server.use(function(req, res, next) {
       // Pipe the page to the response
-      req.ext.pageStream.pipe(res);
+      req.ext.webPageStream.pipe(res);
     });
 
     this.server.use(function(err, req, res, next) {
@@ -74,7 +74,7 @@ describe('devSandbox()', function(){
 
   it('loads page', function(done) {
     var html = "<html>somepage</html>";
-    this.extendedRequest.pagePath = 'somepage.html';
+    this.extendedRequest.webPagePath = 'somepage.html';
 
     async.series([
       function(cb) {
@@ -98,7 +98,7 @@ describe('devSandbox()', function(){
       },
       function(cb) {
         // Have the localhost update the server with the contents of the file.
-        var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.pagePath;
+        var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/' + self.extendedRequest.webPagePath;
 
         self.cache.set(cacheKey, html);
         self.cache.set(cacheKey + '/hash', helper.hashString(html));
@@ -121,7 +121,7 @@ describe('devSandbox()', function(){
   it('does not update page if hash is the same', function(done) {
     var html = loremIpsum();
 
-    this.extendedRequest.pagePath = '/blog/page-one.html';
+    this.extendedRequest.webPagePath = '/blog/page-one.html';
     var cacheKey = self.user.userId + '/' + self.virtualApp.appId + '/blog/page-one.html';
 
     // Prime the cache with the page contents and hash

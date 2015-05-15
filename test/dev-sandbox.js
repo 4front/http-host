@@ -33,7 +33,7 @@ describe('devSandbox()', function(){
     this.extendedRequest = {
       clientConfig: {},
       virtualEnv: 'dev',
-      pagePath: 'index.html',
+      webPagePath: 'index.html',
       user: {
         userId: this.userId
       },
@@ -79,12 +79,12 @@ describe('devSandbox()', function(){
         res.set('Content-Type', 'text/html');
 
         var dataRead = false;
-        req.ext.pagePath = 'index.html';
+        req.ext.webPagePath = 'index.html';
         req.ext.loadPageMiddleware(req, res, function(err) {
           if (_.isError(err))
             return next(err);
 
-          req.ext.pageStream.pipe(res);
+          req.ext.webPageStream.pipe(res);
         });
       }
     });
@@ -148,7 +148,7 @@ describe('devSandbox()', function(){
       var html = '<html></html>';
       this.server.settings.cache.set(urljoin(this.userId,
         this.extendedRequest.virtualApp.appId,
-        self.extendedRequest.pagePath), html);
+        self.extendedRequest.webPagePath), html);
 
       request(this.server)
         .get('/')
@@ -183,7 +183,7 @@ describe('devSandbox()', function(){
 
       var cacheKey = urljoin(this.userId,
         this.extendedRequest.virtualApp.appId,
-        self.extendedRequest.pagePath);
+        self.extendedRequest.webPagePath);
 
       this.server.settings.cache.set(cacheKey, html);
       this.extendedRequest.sendJsonExtendedRequest = true;

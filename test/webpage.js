@@ -20,8 +20,8 @@ describe('webPage', function() {
     this.server = express();
 
     this.server.settings.staticAssetPath = 'http://assethost.com/deployments';
-    this.server.settings.deployments = {
-      readFileStream: sinon.spy(function(appId, versionId, pagePath) {
+    this.server.settings.storage = {
+      readFileStream: sinon.spy(function(pagePath) {
         return sbuff(self.pageContent);
       })
     };
@@ -61,10 +61,10 @@ describe('webPage', function() {
       .expect(200)
       .expect('Virtual-App-Page', 'docs/getting-started.html')
       .expect(function(res) {
-        assert.ok(self.server.settings.deployments.readFileStream.calledWith(
-          self.extendedRequest.virtualApp.appId,
-          self.extendedRequest.virtualAppVersion.versionId,
-          'docs/getting-started.html'));
+        assert.ok(self.server.settings.storage.readFileStream.calledWith(
+          urljoin(self.extendedRequest.virtualApp.appId,
+            self.extendedRequest.virtualAppVersion.versionId,
+            'docs/getting-started.html')));
       })
       .end(done);
   });
@@ -139,7 +139,7 @@ describe('webPage', function() {
   });
 
   it('returns 404 status code', function(done) {
-    this.server.settings.deployments.readFileStream = function(appId, versionId, pagePath) {
+    this.server.settings.storage.readFileStream = function(pagePath) {
       return createErrorStream()
         .on('error', function() {
           // Emit custom missing event
@@ -200,7 +200,7 @@ describe('webPage', function() {
         .expect(function(res) {
           var clientConfig = parseClientConfig(res.text);
           assert.equal(clientConfig.buildType, 'release');
-          assert.equal(clientConfig.pagePath, 'index.html');
+          assert.equal(clientConfig.webPagePath, 'index.html');
 
           assert.equal(clientConfig.staticAssetPath, urljoin(
             self.server.settings.staticAssetPath,
@@ -340,10 +340,10 @@ describe('webPage', function() {
         .expect(200)
         .expect('Content-Type', 'application/xml')
         .expect(function(res) {
-          assert.ok(self.server.settings.deployments.readFileStream.calledWith(
-            self.extendedRequest.virtualApp.appId,
-            self.extendedRequest.virtualAppVersion.versionId,
-            'sitemap.xml'));
+          assert.ok(self.server.settings.storage.readFileStream.calledWith(
+            urljoin(self.extendedRequest.virtualApp.appId,
+              self.extendedRequest.virtualAppVersion.versionId,
+              'sitemap.xml')));
 
           assert.equal(res.text, self.pageContent);
         })
