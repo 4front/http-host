@@ -55,18 +55,48 @@ describe('webPage', function() {
     this.server.use(testUtil.errorHandler);
   });
 
-  it('uses url path as pagePath.html', function(done) {
-    supertest(this.server)
-      .get('/docs/getting-started?fake=1')
-      .expect(200)
-      .expect('Virtual-App-Page', 'docs/getting-started.html')
-      .expect(function(res) {
-        assert.ok(self.server.settings.storage.readFileStream.calledWith(
-          urljoin(self.extendedRequest.virtualApp.appId,
-            self.extendedRequest.virtualAppVersion.versionId,
-            'docs/getting-started.html')));
-      })
-      .end(done);
+  describe('html page request', function() {
+    it('uses url path as webPagePath.html', function(done) {
+      supertest(this.server)
+        .get('/docs/getting-started?fake=1')
+        .expect(200)
+        .expect('Virtual-App-Page', 'docs/getting-started.html')
+        .expect(function(res) {
+          assert.ok(self.server.settings.storage.readFileStream.calledWith(
+            urljoin(self.extendedRequest.virtualApp.appId,
+              self.extendedRequest.virtualAppVersion.versionId,
+              'docs/getting-started.html')));
+        })
+        .end(done);
+    });
+
+    it('uses default page for root request', function(done) {
+      supertest(this.server)
+        .get('/')
+        .expect(200)
+        .expect('Virtual-App-Page', 'index.html')
+        .expect(function(res) {
+          assert.ok(self.server.settings.storage.readFileStream.calledWith(
+            urljoin(self.extendedRequest.virtualApp.appId,
+              self.extendedRequest.virtualAppVersion.versionId,
+              'index.html')));
+        })
+        .end(done);
+    });
+
+    it('uses default page when trailing slash', function(done) {
+      supertest(this.server)
+        .get('/docs/')
+        .expect(200)
+        .expect('Virtual-App-Page', 'docs/index.html')
+        .expect(function(res) {
+          assert.ok(self.server.settings.storage.readFileStream.calledWith(
+            urljoin(self.extendedRequest.virtualApp.appId,
+              self.extendedRequest.virtualAppVersion.versionId,
+              'docs/index.html')));
+        })
+        .end(done);
+    });
   });
 
   describe('authentication', function() {
