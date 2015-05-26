@@ -40,9 +40,6 @@ describe('errorFallback', function() {
       .expect(500)
       .expect('Cache-Control', 'no-cache')
       .expect(/\<html\>/)
-      .expect(function(res) {
-        assert.ok(self.server.settings.logger.error.called);
-      })
       .end(done);
   });
 
