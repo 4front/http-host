@@ -11,6 +11,7 @@ describe('staticAssetRedirect', function() {
     self = this;
     this.server = express();
     this.server.set('trust proxy', true);
+    this.server.settings.staticAssetPath = "somecdn.com";
 
     this.appId = shortid.generate();
     this.versionId = shortid.generate();
@@ -36,8 +37,6 @@ describe('staticAssetRedirect', function() {
   });
 
   it('redirects to absolute url when staticAssetPath is a CDN', function(done) {
-    this.server.settings.staticAssetPath = "somecdn.com";
-
     supertest(this.server)
       .get("/images/logo.png")
       .expect(302)
@@ -48,8 +47,6 @@ describe('staticAssetRedirect', function() {
   });
 
   it('redirects to https absolute url when staticAssetPath is a CDN', function(done) {
-    this.server.settings.staticAssetPath = "somecdn.com";
-
     supertest(this.server)
       .get("/images/logo.png")
       .set('X-Forwarded-Proto', 'https')
@@ -80,6 +77,26 @@ describe('staticAssetRedirect', function() {
       .get("/pages/blog")
       .expect(200)
       .expect('html')
+      .end(done);
+  });
+
+  it('does not redirect non XHR html requests', function(done) {
+    supertest(this.server)
+      .get('/pages/about.html')
+      .expect(200)
+      .expect('html')
+      .end(done);
+  });
+
+  it('does redirect html ajax requests', function(done) {
+    supertest(this.server)
+      .get('/views/about.html')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .expect(302)
+      .expect(function(res) {
+        assert.equal(res.headers.location, 'http://somecdn.com/'
+          + self.appId + '/' + self.versionId + '/views/about.html');
+      })
       .end(done);
   });
 });
