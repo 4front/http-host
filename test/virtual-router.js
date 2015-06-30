@@ -12,7 +12,7 @@ describe('virtualRouter', function() {
     var self = this;
     this.server = express();
 
-    this.server.settings.pluginsDir = path.join(__dirname, './fixtures/plugins');
+    this.server.settings.addonsDir = path.join(__dirname, './fixtures/addons');
 
     this.virtualApp = {
       name: 'test-app'
@@ -28,7 +28,7 @@ describe('virtualRouter', function() {
           manifest: self.manifest
         },
         env: self.env,
-        plugins: []
+        addons: []
       };
       next();
     });
@@ -48,16 +48,16 @@ describe('virtualRouter', function() {
     });
   });
 
-  it('invokes two plugins', function(done) {
+  it('invokes two addons', function(done) {
     this.manifest.router = [
       {
-        module: 'plugin:passthrough',
+        module: 'addon:passthrough',
         options: {
           value: 1
         }
       },
       {
-        module: 'plugin:passthrough',
+        module: 'addon:passthrough',
         path: '/',
         method: 'get',
         options: {
@@ -70,7 +70,7 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        assert.ok(_.isEqual(res.body.plugins, [1, 2]));
+        assert.ok(_.isEqual(res.body.addons, [1, 2]));
       })
       .end(done);
   });
@@ -78,7 +78,7 @@ describe('virtualRouter', function() {
   it('only plugins with matching route execute', function(done) {
     this.manifest.router = [
       {
-        module: 'plugin:passthrough',
+        module: 'addon:passthrough',
         options: {
           value: 1
         },
@@ -86,7 +86,7 @@ describe('virtualRouter', function() {
         method: 'get'
       },
       {
-        module: 'plugin:passthrough',
+        module: 'addon:passthrough',
         options: {
           value: 2
         },
@@ -98,7 +98,7 @@ describe('virtualRouter', function() {
       .get('/foo')
       .expect(200)
       .expect(function(res) {
-        assert.ok(_.isEqual(res.body.plugins, [1]));
+        assert.ok(_.isEqual(res.body.addons, [1]));
       })
       .end(done);
   });
@@ -106,21 +106,21 @@ describe('virtualRouter', function() {
   it('missing middleware function returns 501 response', function(done) {
     this.manifest.router = [
       {
-        module: 'plugins:invalid'
+        module: 'addon:invalid'
       }
     ];
 
     supertest(this.server)
       .get('/')
       .expect(501)
-      .expect(/Could not load the route module plugins:invalid/)
+      .expect(/Could not load the route module addon:invalid/)
       .end(done);
   });
 
   it('returns 501 response for invalid method', function(done) {
     this.manifest.router = [
       {
-        module: 'plugin:passthrough',
+        module: 'addon:passthrough',
         path: '/',
         method: 'blah'
       }
@@ -129,7 +129,7 @@ describe('virtualRouter', function() {
     supertest(this.server)
       .get('/')
       .expect(501)
-      .expect(/Invalid method blah for virtual route plugin:passthrough/)
+      .expect(/Invalid method blah for virtual route addon:passthrough/)
       .end(done);
   });
 
@@ -137,13 +137,13 @@ describe('virtualRouter', function() {
     this.manifest.router = [
       {
         path: '/text',
-        module: 'plugin:sendtext',
+        module: 'addon:sendtext',
         options: {
           text: 'hello!'
         }
       },
       {
-        module: 'plugin:error',
+        module: 'addon:error',
         path: '/',
         options: {
           message: 'error message'
@@ -168,7 +168,7 @@ describe('virtualRouter', function() {
     it('substitutes values correctly', function(done) {
       this.manifest.router = [
         {
-          module: 'plugin:echo-options',
+          module: 'addon:echo-options',
           options: {
             option1: "env:KEY1",
             another: 'foo',
@@ -198,7 +198,7 @@ describe('virtualRouter', function() {
     it('throws error for missing environment variable', function(done) {
       this.manifest.router = [
         {
-          module: 'plugin:echo-options',
+          module: 'addon:echo-options',
           options: {
             option1: "env:MISSING",
           },
@@ -218,7 +218,7 @@ describe('virtualRouter', function() {
     it('expands regex', function(done) {
       this.manifest.router = [
         {
-          module: 'plugin:echo-options',
+          module: 'addon:echo-options',
           options: {
             option1: "regex:/\\",
           },

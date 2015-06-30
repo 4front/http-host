@@ -11,7 +11,7 @@ describe('staticAssetRedirect', function() {
     self = this;
     this.server = express();
     this.server.set('trust proxy', true);
-    this.server.settings.staticAssetPath = "somecdn.com";
+    this.server.settings.deployedAssetsPath = "somecdn.com";
 
     this.appId = shortid.generate();
     this.versionId = shortid.generate();
@@ -36,7 +36,7 @@ describe('staticAssetRedirect', function() {
     });
   });
 
-  it('redirects to absolute url when staticAssetPath is a CDN', function(done) {
+  it('redirects to absolute url when deployedAssetsPath is a CDN', function(done) {
     supertest(this.server)
       .get("/images/logo.png")
       .expect(302)
@@ -46,7 +46,7 @@ describe('staticAssetRedirect', function() {
       .end(done);
   });
 
-  it('redirects to https absolute url when staticAssetPath is a CDN', function(done) {
+  it('redirects to https absolute url when deployedAssetsPath is a CDN', function(done) {
     supertest(this.server)
       .get("/images/logo.png")
       .set('X-Forwarded-Proto', 'https')
@@ -58,8 +58,8 @@ describe('staticAssetRedirect', function() {
       .end(done);
   });
 
-  it('uses relative url if staticAssetPath starts with slash', function(done) {
-    this.server.settings.staticAssetPath = '/deployments';
+  it('uses relative url if deployedAssetsPath starts with slash', function(done) {
+    this.server.settings.deployedAssetsPath = '/deployments';
 
     supertest(this.server)
       .get("/images/logo.gif")
@@ -71,7 +71,7 @@ describe('staticAssetRedirect', function() {
   });
 
   it('skips middleware if no file extension', function(done) {
-    this.server.settings.staticAssetPath = '/deployments';
+    this.server.settings.deployedAssetsPath = '/deployments';
 
     supertest(this.server)
       .get("/pages/blog")

@@ -19,7 +19,7 @@ describe('webPage', function() {
 
     this.server = express();
 
-    this.server.settings.staticAssetPath = 'assethost.com/deployments';
+    this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
     this.server.settings.storage = {
       readFileStream: sinon.spy(function(pagePath) {
         return sbuff(self.pageContent);
@@ -233,7 +233,7 @@ describe('webPage', function() {
           assert.equal(clientConfig.webPagePath, 'index.html');
 
           assert.equal(clientConfig.staticAssetPath, '//' + urljoin(
-            self.server.settings.staticAssetPath,
+            self.server.settings.deployedAssetsPath,
             self.extendedRequest.virtualApp.appId,
             version.versionId));
         })
@@ -258,20 +258,19 @@ describe('webPage', function() {
         .get('/')
         .expect(200)
         .expect(function(res) {
-          var scriptUrl = '//' + urljoin(self.server.settings.staticAssetPath, appId, '/123/js/main.js');
+          var scriptUrl = '//' + urljoin(self.server.settings.deployedAssetsPath, appId, '/123/js/main.js');
           assert.ok(res.text.indexOf(scriptUrl) !== -1);
         })
         .end(done);
     });
 
     it('rewrites asset URLs for relative', function(done) {
-      self.server.settings.staticAssetPath = '/static';
+      self.server.settings.deployedAssetsPath = '/static';
 
       supertest(this.server)
         .get('/')
         .expect(200)
         .expect(function(res) {
-          debugger;
           var scriptUrl = '/static/' + self.extendedRequest.virtualApp.appId + '/123/js/main.js';
           assert.ok(res.text.indexOf(scriptUrl) !== -1);
         })
