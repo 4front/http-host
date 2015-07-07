@@ -13,7 +13,7 @@ describe('addonLoader()', function(){
     self = this;
 
     this.addonLoader = require('../lib/addon-loader')({
-      builtInAddonsDir: path.join(__dirname, "./fixtures/addons")
+      builtInAddonsDir: [path.join(__dirname, "./fixtures/addons")]
     });
   });
 

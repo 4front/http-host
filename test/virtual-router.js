@@ -4,11 +4,12 @@ var _ = require('lodash');
 var virtualRouter = require('../lib/middleware/virtual-router');
 var assert = require('assert');
 var path = require('path');
+var sbuff = require('simple-bufferstream');
 var querystring = require('querystring');
 
 // TODO: Need to support 4 arrity middleware
 describe('virtualRouter', function() {
-  before(function() {
+  beforeEach(function() {
     var self = this;
     this.server = express();
 
@@ -32,7 +33,10 @@ describe('virtualRouter', function() {
     });
 
     this.server.use(virtualRouter({
-      builtInAddonsDir: path.join(__dirname, "./fixtures/addons")
+      builtInAddonsDir: [
+        path.join(__dirname, "./fixtures/addons"),
+        path.join(__dirname, "../lib/addons")
+      ]
     }));
 
     this.server.use(function(req, res, next) {
@@ -240,5 +244,24 @@ describe('virtualRouter', function() {
         })
         .end(done);
     });
+  });
+
+  it('uses default router if no manifest', function(done) {
+    var contents = "<html></html>";
+
+    this.server.settings.storage = {
+      readFileStream: function() {
+        return sbuff(contents);
+      }
+    };
+
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect('Content-Type', /text\/html/)
+      .expect(function(res) {
+        assert.equal(contents, res.text);
+      })
+      .end(done);
   });
 });
