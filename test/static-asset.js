@@ -46,12 +46,12 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('skips middleware for non-matching paths', function(done) {
-    supertest(this.server)
-      .get("images/logo.png")
-      .expect(404)
-      .end(done);
-  });
+  // it('skips middleware for non-matching paths', function(done) {
+  //   supertest(this.server)
+  //     .get("images/logo.png")
+  //     .expect(404)
+  //     .end(done);
+  // });
 
   it('skips middleware if no file name', function(done) {
     supertest(this.server)
@@ -60,12 +60,12 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('skips middleware if deployedAssetsPath does not start with forward slash', function(done) {
-    this.server.settings.deployedAssetsPath = "somecdn.com";
-
-    supertest(this.server)
-      .get(urljoin(this.server.settings.deployedAssetsPath, this.appId, this.versionId, "images/logo.png"))
-      .expect(404)
-      .end(done);
-  });
+  // it('skips middleware if deployedAssetsPath does not start with forward slash', function(done) {
+  //   this.server.settings.deployedAssetsPath = "somecdn.com";
+  //
+  //   supertest(this.server)
+  //     .get(urljoin(this.server.settings.deployedAssetsPath, this.appId, this.versionId, "images/logo.png"))
+  //     .expect(404)
+  //     .end(done);
+  // });
 });
