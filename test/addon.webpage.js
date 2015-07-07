@@ -7,7 +7,7 @@ var supertest = require('supertest');
 var urljoin = require('url-join');
 var sbuff = require('simple-bufferstream');
 var testUtil = require('./test-util');
-var webPage = require('../lib/middleware/webpage');
+var webPage = require('../lib/addons/webpage');
 
 var self;
 describe('webPage', function() {

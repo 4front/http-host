@@ -7,10 +7,10 @@
 
 ![http://www.4front.io](https://s3-us-west-2.amazonaws.com/4front-media/4front-logo.png)
 
-Multi-tenant virtual app host container for 4front. Learn more at: [www.4front.io](http://www.4front.io)
+Multi-tenant virtual app host container for 4front. Learn more at: [http://4front.io](http://4front.io)
 
 ## License
-Licensed under the Apache License, Version 2.0. See the top-level file LICENSE.txt and (http://www.apache.org/licenses/LICENSE-2.0).
+Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
 [npm-image]: https://img.shields.io/npm/v/4front-apphost.svg?style=flat
 [npm-url]: https://npmjs.org/package/4front-apphost
@@ -20,5 +20,3 @@ Licensed under the Apache License, Version 2.0. See the top-level file LICENSE.t
 [coveralls-url]: https://coveralls.io/r/4front/apphost?branch=master
 [downloads-image]: https://img.shields.io/npm/dm/4front-apphost.svg?style=flat
 [downloads-url]: https://npmjs.org/package/4front-apphost
-
-

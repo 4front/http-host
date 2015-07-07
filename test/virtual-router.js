@@ -12,8 +12,6 @@ describe('virtualRouter', function() {
     var self = this;
     this.server = express();
 
-    this.server.settings.addonsDir = path.join(__dirname, './fixtures/addons');
-
     this.virtualApp = {
       name: 'test-app'
     };
@@ -33,7 +31,9 @@ describe('virtualRouter', function() {
       next();
     });
 
-    this.server.use(virtualRouter());
+    this.server.use(virtualRouter({
+      builtInAddonsDir: path.join(__dirname, "./fixtures/addons")
+    }));
 
     this.server.use(function(req, res, next) {
       res.json(req.ext);
@@ -42,22 +42,22 @@ describe('virtualRouter', function() {
     this.server.use(function(err, req, res, next) {
       res.statusCode = err.status || 500;
       if (res.statusCode === 500 || res.statusCode > 501)
-        console.log(err.stack);
+        console.log(err.stack || err.message || err.toString());
 
-      res.send(err.message);
+      res.json(err);
     });
   });
 
   it('invokes two addons', function(done) {
     this.manifest.router = [
       {
-        module: 'addon:passthrough',
+        module: 'passthrough',
         options: {
           value: 1
         }
       },
       {
-        module: 'addon:passthrough',
+        module: 'passthrough',
         path: '/',
         method: 'get',
         options: {
@@ -78,7 +78,7 @@ describe('virtualRouter', function() {
   it('only plugins with matching route execute', function(done) {
     this.manifest.router = [
       {
-        module: 'addon:passthrough',
+        module: 'passthrough',
         options: {
           value: 1
         },
@@ -86,7 +86,7 @@ describe('virtualRouter', function() {
         method: 'get'
       },
       {
-        module: 'addon:passthrough',
+        module: 'passthrough',
         options: {
           value: 2
         },
@@ -106,21 +106,23 @@ describe('virtualRouter', function() {
   it('missing middleware function returns 501 response', function(done) {
     this.manifest.router = [
       {
-        module: 'addon:invalid'
+        module: 'invalid'
       }
     ];
 
     supertest(this.server)
       .get('/')
       .expect(501)
-      .expect(/Could not load the route module addon:invalid/)
+      .expect(function(res) {
+        assert.equal(res.body.code, "addonLoadError")
+      })
       .end(done);
   });
 
   it('returns 501 response for invalid method', function(done) {
     this.manifest.router = [
       {
-        module: 'addon:passthrough',
+        module: 'passthrough',
         path: '/',
         method: 'blah'
       }
@@ -129,7 +131,9 @@ describe('virtualRouter', function() {
     supertest(this.server)
       .get('/')
       .expect(501)
-      .expect(/Invalid method blah for virtual route addon:passthrough/)
+      .expect(function(res) {
+        assert.equal(res.body.code, "invalidVirtualRouteMethod")
+      })
       .end(done);
   });
 
@@ -137,13 +141,13 @@ describe('virtualRouter', function() {
     this.manifest.router = [
       {
         path: '/text',
-        module: 'addon:sendtext',
+        module: 'sendtext',
         options: {
           text: 'hello!'
         }
       },
       {
-        module: 'addon:error',
+        module: 'next-error',
         path: '/',
         options: {
           message: 'error message'
@@ -168,7 +172,7 @@ describe('virtualRouter', function() {
     it('substitutes values correctly', function(done) {
       this.manifest.router = [
         {
-          module: 'addon:echo-options',
+          module: 'echo-options',
           options: {
             option1: "env:KEY1",
             another: 'foo',
@@ -198,7 +202,7 @@ describe('virtualRouter', function() {
     it('throws error for missing environment variable', function(done) {
       this.manifest.router = [
         {
-          module: 'addon:echo-options',
+          module: 'echo-options',
           options: {
             option1: "env:MISSING",
           },
@@ -208,8 +212,10 @@ describe('virtualRouter', function() {
 
       supertest(this.server)
         .get('/options')
-        .expect(400)
-        .expect(/Invalid environment variable MISSING/)
+        .expect(501)
+        .expect(function(res) {
+          assert.equal(res.body.code, "virtualRouterOptionsError")
+        })
         .end(done);
     });
   });
@@ -218,7 +224,7 @@ describe('virtualRouter', function() {
     it('expands regex', function(done) {
       this.manifest.router = [
         {
-          module: 'addon:echo-options',
+          module: 'echo-options',
           options: {
             option1: "regex:/\\",
           },
@@ -228,8 +234,10 @@ describe('virtualRouter', function() {
 
       supertest(this.server)
         .get('/options')
-        .expect(400)
-        .expect(/Invalid RegExp/)
+        .expect(501)
+        .expect(function(res) {
+          assert.equal(res.body.code, "virtualRouterOptionsError")
+        })
         .end(done);
     });
   });
