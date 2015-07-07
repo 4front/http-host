@@ -41,7 +41,6 @@
     "jwt-simple": "^0.3.0",
     "lodash": "^3.0.1",
     "memory-cache-stream": "^1.0.2",
-    "redis-streams": "^1.0.3",
     "simple-errors": "^1.0.0",
     "url-join": "0.0.1"
   },

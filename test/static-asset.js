@@ -28,7 +28,7 @@ describe('staticAsset', function() {
     this.server.use(staticAsset());
 
     this.server.use(function(req, res, next) {
-      res.status(404).end();
+      res.status(404).send("not found");
     });
   });
 
@@ -49,13 +49,15 @@ describe('staticAsset', function() {
   it('skips middleware for non-matching paths', function(done) {
     supertest(this.server)
       .get("images/logo.png")
-      .expect(404, done);
+      .expect(404)
+      .end(done);
   });
 
   it('skips middleware if no file name', function(done) {
     supertest(this.server)
       .get(urljoin(this.server.settings.deployedAssetsPath, this.appId, this.versionId))
-      .expect(404, done);
+      .expect(404)
+      .end(done);
   });
 
   it('skips middleware if deployedAssetsPath does not start with forward slash', function(done) {
@@ -63,6 +65,7 @@ describe('staticAsset', function() {
 
     supertest(this.server)
       .get(urljoin(this.server.settings.deployedAssetsPath, this.appId, this.versionId, "images/logo.png"))
-      .expect(404, done);
+      .expect(404)
+      .end(done);
   });
 });
