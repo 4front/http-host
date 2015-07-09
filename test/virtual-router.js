@@ -169,8 +169,8 @@ describe('virtualRouter', function() {
 
   describe('environment variable substitution', function() {
     beforeEach(function() {
-      this.env.KEY1 = "key1_value";
-      this.env.KEY2 = "key2_value";
+      this.env.KEY1 = {value: "key1_value" };
+      this.env.KEY2 = {value: "key2_value" };
     });
 
     it('substitutes values correctly', function(done) {
