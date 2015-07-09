@@ -40,7 +40,6 @@
     "htmlprep": "^1.0.13",
     "jwt-simple": "^0.3.0",
     "lodash": "^3.0.1",
-    "memory-cache-stream": "^1.0.2",
     "simple-errors": "^1.0.0",
     "url-join": "0.0.1"
   },
@@ -51,6 +50,7 @@
     "express": "^4.11.1",
     "istanbul": "^0.3.5",
     "lorem-ipsum": "^1.0.1",
+    "memory-cache-stream": "^1.0.4",
     "mocha": "^2.1.0",
     "shortid": "^2.2.2",
     "simple-bufferstream": "^1.0.0",
