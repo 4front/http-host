@@ -99,56 +99,6 @@ describe('webPage', function() {
     });
   });
 
-  describe('authentication', function() {
-    it('un-authenticated user redirected', function(done) {
-      this.extendedRequest.isAuthenticated = false;
-      this.options.auth = true;
-      this.options.noAuthUrl = '/not-authorized';
-
-      supertest(this.server)
-        .get('/foo')
-        .expect(302)
-        .expect(/\/not-authorized/)
-        .end(done);
-    });
-
-    it('un-authenticted with no authRedirect returns 401', function(done) {
-      this.extendedRequest.isAuthenticated = false;
-      this.options.auth = true;
-
-      supertest(this.server)
-        .get('/foo')
-        .expect(401)
-        .end(done);
-    });
-
-    it('redirects to root when path is not root', function(done) {
-      this.extendedRequest.isAuthenticated = false;
-      this.options.auth = true;
-      this.options.noAuthPage = 'login.html';
-      this.options.returnUrlCookie = 'return_url';
-
-      supertest(this.server)
-        .get('/foo?plan=1')
-        .expect(302)
-        .expect("Moved Temporarily. Redirecting to /")
-        .expect('set-cookie', "return_url=" + encodeURIComponent('/foo?plan=1') + "; Path=/; HttpOnly")
-        .end(done);
-    });
-
-    it('rewrites to login.html when path is root', function(done) {
-      this.extendedRequest.isAuthenticated = false;
-      this.options.auth = true;
-      this.options.noAuthPage = 'login.html';
-
-      supertest(this.server)
-        .get('/')
-        .expect(200)
-        .expect('Virtual-App-Page', 'login.html')
-        .end(done);
-    });
-  });
-
   it('returns 400 if no virtualApp context', function(done) {
     this.extendedRequest.virtualApp = null;
 
@@ -301,14 +251,6 @@ describe('webPage', function() {
     it('detects html extension', function(done) {
       supertest(this.server)
         .get('/about.html')
-        .expect(301)
-        .expect(/Redirecting to \/about$/)
-        .end(done);
-    });
-
-    it('detects trailing slash', function(done) {
-      supertest(this.server)
-        .get('/aBOUt/')
         .expect(301)
         .expect(/Redirecting to \/about$/)
         .end(done);
