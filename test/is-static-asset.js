@@ -6,6 +6,7 @@ describe('isStaticAsset', function() {
   it('anyExceptHtml', function() {
     assert.isTrue(isStaticAsset.anyExceptHtml({path: '/js/main.js'}));
     assert.isTrue(isStaticAsset.anyExceptHtml({path: '/img/logo.png'}));
+    assert.isTrue(isStaticAsset.anyExceptHtml({path: '/img/logo.jpg'}));
     assert.isFalse(isStaticAsset.anyExceptHtml({path: '/templates/home.html'}));
     assert.isFalse(isStaticAsset.anyExceptHtml({path: '/'}));
     assert.isFalse(isStaticAsset.anyExceptHtml({path: '/blog'}));
