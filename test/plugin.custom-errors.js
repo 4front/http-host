@@ -6,7 +6,7 @@ var assert = require('assert');
 var sinon = require('sinon');
 var sbuff = require('simple-bufferstream');
 var testUtil = require('./test-util');
-var customErrors = require('../lib/addons/custom-errors');
+var customErrors = require('../lib/plugins/custom-errors');
 
 require('simple-errors');
 

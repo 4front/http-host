@@ -27,15 +27,15 @@ describe('virtualRouter', function() {
           manifest: self.manifest
         },
         env: self.env,
-        addons: []
+        plugins: []
       };
       next();
     });
 
     this.server.use(virtualRouter({
-      builtInAddonsDir: [
-        path.join(__dirname, "./fixtures/addons"),
-        path.join(__dirname, "../lib/addons")
+      builtInPluginsDir: [
+        path.join(__dirname, "./fixtures/plugins"),
+        path.join(__dirname, "../lib/plugins")
       ]
     }));
 
@@ -52,7 +52,7 @@ describe('virtualRouter', function() {
     });
   });
 
-  it('invokes two addons', function(done) {
+  it('invokes two plugins', function(done) {
     this.manifest.router = [
       {
         module: 'passthrough',
@@ -74,7 +74,7 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        assert.ok(_.isEqual(res.body.addons, [1, 2]));
+        assert.ok(_.isEqual(res.body.plugins, [1, 2]));
       })
       .end(done);
   });
@@ -102,7 +102,7 @@ describe('virtualRouter', function() {
       .get('/foo')
       .expect(200)
       .expect(function(res) {
-        assert.ok(_.isEqual(res.body.addons, [1]));
+        assert.ok(_.isEqual(res.body.plugins, [1]));
       })
       .end(done);
   });
@@ -118,7 +118,7 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(501)
       .expect(function(res) {
-        assert.equal(res.body.code, "addonLoadError")
+        assert.equal(res.body.code, "pluginLoadError")
       })
       .end(done);
   });
