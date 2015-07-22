@@ -9,6 +9,8 @@ var querystring = require('querystring');
 
 // TODO: Need to support 4 arrity middleware
 describe('virtualRouter', function() {
+  var virtualRouterOptions;
+
   beforeEach(function() {
     var self = this;
     this.server = express();
@@ -32,12 +34,17 @@ describe('virtualRouter', function() {
       next();
     });
 
-    this.server.use(virtualRouter({
+    virtualRouterOptions = {
       builtInPluginsDir: [
         path.join(__dirname, "./fixtures/plugins"),
         path.join(__dirname, "../lib/plugins")
-      ]
-    }));
+      ],
+      autoIncludeWebpagePlugin: false
+    };
+
+    this.server.use(function(req, res, next) {
+      virtualRouter(virtualRouterOptions)(req, res, next);
+    });
 
     this.server.use(function(req, res, next) {
       res.json(req.ext);
@@ -248,6 +255,38 @@ describe('virtualRouter', function() {
 
   it('uses default router if no manifest', function(done) {
     var contents = "<html></html>";
+
+    virtualRouterOptions.autoIncludeWebpagePlugin = true;
+
+    this.server.settings.storage = {
+      readFileStream: function() {
+        return sbuff(contents);
+      }
+    };
+
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect('Content-Type', /text\/html/)
+      .expect(function(res) {
+        assert.equal(contents, res.text);
+      })
+      .end(done);
+  });
+
+  it('auto includes webpage plugin', function(done) {
+    this.manifest.router = [
+      {
+        module: 'passthrough',
+        options: {
+          value: 'foo'
+        },
+        path: '/'
+      }
+    ];
+
+    var contents = "<html></html>";
+    virtualRouterOptions.autoIncludeWebpagePlugin = true;
 
     this.server.settings.storage = {
       readFileStream: function() {
