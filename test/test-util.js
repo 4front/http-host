@@ -2,7 +2,10 @@ var stream = require('stream');
 
 // Test utility functions
 module.exports.errorHandler = function(err, req, res, next) {
-  res.statusCode = err.status || 500;
+  if (!err.status)
+    err.status = 500;
+
+  res.statusCode = err.status;
   if (res.statusCode === 500) {
     console.log(err.stack);
     res.end(err.stack);
