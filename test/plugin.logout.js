@@ -1,4 +1,4 @@
-var logout = require('../lib/middleware/logout');
+var logout = require('../lib/plugins/logout');
 var express = require('express');
 var session = require('express-session');
 var supertest = require('supertest');
@@ -13,27 +13,29 @@ describe('logout()', function(){
     server = express();
 
     server.use(session({
-      name: 'session', 
+      name: 'session',
       secret: '23423425',
       resave: false,
       saveUninitialized: false
     }));
 
-    server.get('/_p/logout', logout({
-      sessionCookieName: 'session'
+    server.get('/logout', logout({
+      sessionCookieName: 'session',
+      redirectUrl: '/?loggedout=true'
     }));
   });
 
   describe('logout()', function(){
     it('should redirect to index page', function(done){
       supertest(server)
-        .get('/_p/logout')
+        .get('/logout')
         .set('Cookie', 'session=abcd')
         .expect(302)
+        .expect('Location', '/?loggedout=true')
         .expect(function(res) {
           assert.ok(/^session=;/.test(res.headers['set-cookie'][0]));
         })
-        .expect(/\?_logout=1/, done);
+        .end(done);
     });
   });
 });

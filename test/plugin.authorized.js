@@ -58,20 +58,29 @@ describe('authorized', function() {
       user = null;
     });
 
-    it('loginUrl causes user to be redirected', function(done) {
-      authorizedOptions.loginUrlRedirect = '/login';
+  it('should redirect non logged-in user to loginUrl', function(done) {
+    user = null;
+    authorizedOptions.loginUrl = '/login';
 
-      supertest(this.server)
-        .get('/protected/secret')
-        .expect(302)
-        .expect('location', '/login')
-        .expect('set-cookie', "returnUrl=" + encodeURIComponent('/protected/secret') + "; Path=/; HttpOnly")
-        .end(done);
+    supertest(this.server)
+      .get('/protected/secret')
+      .expect(302)
+      .expect('location', '/login')
+      .expect('set-cookie', "returnUrl=" + encodeURIComponent('/protected/secret') + "; Path=/; HttpOnly")
+      .end(done);
+  });
+
+  describe("single page app", function() {
+    beforeEach(function() {
+      authorizedOptions.loginPage = 'login.html';
+
+      // Require auth on the app root
+      authorizedOptions.routes.push({
+        path: "/",
+      });
     });
 
     it('loginPage option on root path causes webPage to be set', function(done) {
-      authorizedOptions.loginPage = 'login.html';
-
       supertest(this.server)
         .get('/')
         .expect(200)
@@ -82,26 +91,29 @@ describe('authorized', function() {
     });
 
     it('loginPage option on non-root path causes redirect to root', function(done) {
-      authorizedOptions.loginPage = 'login.html';
-
       supertest(this.server)
-        .get('/protected')
+        .get('/protected/foo')
         .expect(302)
         .expect('location', '/')
-        .expect('set-cookie', "returnUrl=" + encodeURIComponent('/protected') + "; Path=/; HttpOnly")
-        .end(done);
-    });
-
-    it('returns 401 if no loginUrl or loginPage', function(done) {
-      supertest(this.server)
-        .get('/protected')
-        .expect(401)
-        .expect('error-code', "noLoggedInUser")
+        .expect('set-cookie', "returnUrl=" + encodeURIComponent('/protected/foo') + "; Path=/; HttpOnly")
         .end(done);
     });
   });
 
+  it('returns 401 if no loginUrl or loginPage', function(done) {
+    user = null;
+
+    supertest(this.server)
+      .get('/protected/foo')
+      .expect(401)
+      .expect('error-code', "noLoggedInUser")
+      .end(done);
+  });
+});
+
   it('allows user for request not covered by authorized path', function(done) {
+    user = null;
+
     supertest(this.server)
       .get('/public')
       .expect(200, done);
