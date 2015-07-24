@@ -29,11 +29,11 @@ describe('logout()', function(){
     it('should redirect to index page', function(done){
       supertest(server)
         .get('/logout')
-        .set('Cookie', 'session=abcd')
+        .set('Cookie', '4front.sessionid=abcd')
         .expect(302)
         .expect('Location', '/?loggedout=true')
         .expect(function(res) {
-          assert.ok(/^session=;/.test(res.headers['set-cookie'][0]));
+          assert.ok(/^4front.sessionid=;/.test(res.headers['set-cookie'][0]));
         })
         .end(done);
     });
