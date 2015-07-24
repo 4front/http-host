@@ -43,6 +43,7 @@
     "lodash": "^3.0.1",
     "path-to-regexp": "^1.2.0",
     "simple-errors": "^1.0.0",
+    "uid-safe": "^2.0.0",
     "url-join": "0.0.1"
   },
   "devDependencies": {
