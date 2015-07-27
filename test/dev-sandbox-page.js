@@ -40,7 +40,7 @@ describe('devSandbox()', function(){
       clientConfig: {},
       virtualEnv: 'dev',
       pagePath: 'index.html',
-      user: this.user,
+      developerId: this.user.userId,
       virtualApp: this.virtualApp
     };
 
