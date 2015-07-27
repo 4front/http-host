@@ -68,7 +68,9 @@ describe('customErrors', function() {
       next(self.error);
     });
 
-    this.server.use(customErrors(this.options));
+    this.server.use(function(err, req, res, next) {
+      customErrors(self.options)(err, req, res, next);
+    });
 
     // Fallback error handler
     this.server.use(function(err, req, res, next) {
@@ -111,7 +113,6 @@ describe('customErrors', function() {
     this.updateRequest = function(req) {
       req.ext.virtualApp = null;
     };
-    // this.extendedRequest.virtualApp = null;
 
     supertest(this.server)
       .get('/')
@@ -155,5 +156,19 @@ describe('customErrors', function() {
       .expect(500)
       .expect("<html>special</html>")
       .end(done);
+  });
+
+  it('works with string error code options', function(done) {
+    this.error = Error.http(400, "Test error");
+
+    this.options = {
+      errors: {
+        "400": "errors/400.html"
+      }
+    };
+
+    supertest(this.server)
+      .get('/')
+      .expect(400, done);
   });
 });
