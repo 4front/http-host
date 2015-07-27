@@ -1,9 +1,12 @@
 var supertest = require('supertest');
 var express = require('express');
 var assert = require('assert');
+var sinon = require('sinon');
 var _ = require('lodash');
 var testUtil = require('./test-util');
 var authorized = require('../lib/plugins/authorized');
+
+require('dash-assert');
 
 describe('authorized', function() {
   var self, user, authorizedOptions;
@@ -14,13 +17,16 @@ describe('authorized', function() {
     this.server = express();
 
     user = {};
+
+    this.sessionStub = {
+      user: user,
+      destroy: sinon.spy(function() {})
+    };
+
+    this.extendedRequest = {};
     this.server.use(function(req, res, next) {
-      req.ext = {};
-      req.session = {
-        user: user,
-        destroy: function(){
-        }
-      };
+      req.ext = self.extendedRequest;
+      req.session = self.sessionStub;
 
       next();
     });
@@ -54,13 +60,8 @@ describe('authorized', function() {
     this.server.use(testUtil.errorHandler);
   });
 
-  describe('missing user', function(done) {
-    beforeEach(function() {
-      user = null;
-    });
-
   it('should redirect non logged-in user to loginUrl', function(done) {
-    user = null;
+    this.sessionStub.user = null;
     authorizedOptions.loginUrl = '/login';
 
     supertest(this.server)
@@ -73,6 +74,7 @@ describe('authorized', function() {
 
   describe("single page app", function() {
     beforeEach(function() {
+      this.sessionStub.user = null;
       authorizedOptions.loginPage = 'login.html';
 
       // Require auth on the app root
@@ -102,7 +104,7 @@ describe('authorized', function() {
   });
 
   it('returns 401 if no loginUrl or loginPage', function(done) {
-    user = null;
+    this.sessionStub.user = null;
 
     supertest(this.server)
       .get('/protected/foo')
@@ -110,10 +112,9 @@ describe('authorized', function() {
       .expect('error-code', "noLoggedInUser")
       .end(done);
   });
-});
 
   it('null user allowed to access route that has no authorization rule', function(done) {
-    user = null;
+    this.sessionStub.user = null;
 
     supertest(this.server)
       .get('/public')
@@ -144,6 +145,21 @@ describe('authorized', function() {
         .get('/protected/wherever')
         .expect(403)
         .expect('error-code', "authFailedNotMemberOfAllowedGroup")
+        .expect(function(res) {
+          assert.isTrue(self.sessionStub.destroy.called);
+        })
+        .end(done);
+    });
+
+    it('does not destroy session when virtualEnv is dev', function(done) {
+      self.extendedRequest.virtualEnv = 'dev';
+
+      supertest(this.server)
+        .get('/protected/wherever')
+        .expect(403)
+        .expect(function(res) {
+          assert.isFalse(self.sessionStub.destroy.called);
+        })
         .end(done);
     });
 
