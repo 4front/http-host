@@ -1,6 +1,7 @@
 var supertest = require('supertest');
 var express = require('express');
 var assert = require('assert');
+var _ = require('lodash');
 var testUtil = require('./test-util');
 var authorized = require('../lib/plugins/authorized');
 
@@ -144,6 +145,9 @@ describe('authorized', function() {
       supertest(this.server)
         .get('/protected/')
         .expect(200)
+        .expect(function(res) {
+          assert.deepEqual(res.body.user, _.omit(user, 'groups', 'roles'));
+        })
         .end(done);
     });
   });
