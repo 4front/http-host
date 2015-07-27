@@ -112,6 +112,24 @@ describe('authorized', function() {
   });
 });
 
+  it('null user allowed to access route that has no authorization rule', function(done) {
+    user = null;
+
+    supertest(this.server)
+      .get('/public')
+      .expect(200, done);
+  });
+
+  it('user appended to request even for routes without authorization rule', function(done) {
+    supertest(this.server)
+      .get('/public')
+      .expect(200)
+      .expect(function(res) {
+        assert.deepEqual(res.body.user, _.omit(user, 'roles', 'groups'));
+      })
+      .end(done);
+  });
+
   it('allows user for request not covered by authorized path', function(done) {
     user = null;
 
