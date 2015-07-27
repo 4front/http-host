@@ -3,7 +3,8 @@ require('simple-errors');
 
 module.exports = function(options) {
   _.defaults(options || {}, {
-    error: 'error'
+    error: 'error',
+    status: 400
   });
 
   return function(req, res, next) {

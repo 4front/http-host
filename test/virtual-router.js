@@ -231,6 +231,29 @@ describe('virtualRouter', function() {
     });
   });
 
+  it("passes error to error handler middleware", function(done) {
+    var errorMessage = "forced error";
+    this.manifest.router = [
+      {
+        module: 'next-error',
+        options: {
+          error: errorMessage
+        }
+      },
+      {
+        module: 'err-handler',
+        errorHandler: true
+      }
+    ];
+
+    supertest(this.server)
+      .get('/options')
+      .expect(400)
+      .expect("Error-Handler", 'err-handler')
+      .expect(errorMessage)
+      .end(done);
+  });
+
   describe('regex expansion', function() {
     it('expands regex', function(done) {
       this.manifest.router = [
