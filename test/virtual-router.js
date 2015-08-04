@@ -52,7 +52,7 @@ describe('virtualRouter', function() {
 
     this.server.use(function(err, req, res, next) {
       res.statusCode = err.status || 500;
-      if (res.statusCode === 500 || res.statusCode > 501)
+      if (res.statusCode >= 500 && res.statusCode !== 506)
         console.log(err.stack || err.message || err.toString());
 
       res.json(err);
@@ -114,7 +114,7 @@ describe('virtualRouter', function() {
       .end(done);
   });
 
-  it('missing middleware function returns 501 response', function(done) {
+  it('missing middleware function returns 506 response', function(done) {
     this.manifest.router = [
       {
         module: 'invalid'
@@ -123,14 +123,14 @@ describe('virtualRouter', function() {
 
     supertest(this.server)
       .get('/')
-      .expect(501)
+      .expect(506)
       .expect(function(res) {
         assert.equal(res.body.code, "pluginLoadError")
       })
       .end(done);
   });
 
-  it('returns 501 response for invalid method', function(done) {
+  it('returns 506 response for invalid method', function(done) {
     this.manifest.router = [
       {
         module: 'passthrough',
@@ -141,7 +141,7 @@ describe('virtualRouter', function() {
 
     supertest(this.server)
       .get('/')
-      .expect(501)
+      .expect(506)
       .expect(function(res) {
         assert.equal(res.body.code, "invalidVirtualRouteMethod")
       })
@@ -174,63 +174,6 @@ describe('virtualRouter', function() {
       .end(done);
   });
 
-  describe('environment variable substitution', function() {
-    beforeEach(function() {
-      this.env.KEY1 = {value: "key1_value" };
-      this.env.KEY2 = {value: "key2_value" };
-    });
-
-    it('substitutes values correctly', function(done) {
-      this.manifest.router = [
-        {
-          module: 'echo-options',
-          options: {
-            option1: "env:KEY1",
-            another: 'foo',
-            more: {
-              option2: "env:KEY2"
-            }
-          },
-          path: '/options'
-        }
-      ];
-
-      supertest(this.server)
-        .get('/options')
-        .expect(200)
-        .expect(function(res) {
-          assert.deepEqual(res.body, {
-            option1: "key1_value",
-            another: 'foo',
-            more: {
-              option2: "key2_value"
-            }
-          });
-        })
-        .end(done);
-    });
-
-    it('throws error for missing environment variable', function(done) {
-      this.manifest.router = [
-        {
-          module: 'echo-options',
-          options: {
-            option1: "env:MISSING",
-          },
-          path: '/options'
-        }
-      ];
-
-      supertest(this.server)
-        .get('/options')
-        .expect(501)
-        .expect(function(res) {
-          assert.equal(res.body.code, "virtualRouterOptionsError")
-        })
-        .end(done);
-    });
-  });
-
   it("passes error to error handler middleware", function(done) {
     var errorMessage = "forced error";
     this.manifest.router = [
@@ -252,28 +195,6 @@ describe('virtualRouter', function() {
       .expect("Error-Handler", 'err-handler')
       .expect(errorMessage)
       .end(done);
-  });
-
-  describe('regex expansion', function() {
-    it('expands regex', function(done) {
-      this.manifest.router = [
-        {
-          module: 'echo-options',
-          options: {
-            option1: "regex:/\\",
-          },
-          path: '/options'
-        }
-      ];
-
-      supertest(this.server)
-        .get('/options')
-        .expect(501)
-        .expect(function(res) {
-          assert.equal(res.body.code, "virtualRouterOptionsError")
-        })
-        .end(done);
-    });
   });
 
   it('uses default router if no manifest', function(done) {

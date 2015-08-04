@@ -180,7 +180,7 @@ describe('authorized', function() {
         .get('/protected/')
         .expect(200)
         .expect(function(res) {
-          assert.deepEqual(res.body.user, _.omit(user, 'groups', 'roles'));
+          assert.deepEqual(res.body.user, user);
         })
         .end(done);
     });
