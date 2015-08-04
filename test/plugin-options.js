@@ -69,7 +69,6 @@ describe('pluginOptions', function() {
 
       var expandedOptions = pluginOptions(options, {});
       assert.ok(typeof expandedOptions.option1, RegExp);
-      debugger;
       assert.equal(expandedOptions.option1.toString(), "/[a-z]+/")
     });
 

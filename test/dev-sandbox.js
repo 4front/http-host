@@ -62,7 +62,6 @@ describe('devSandbox()', function(){
       router:[]
     };
 
-    // debugger;
     this.server.settings.cache.set(
       this.userId + '/' + this.extendedRequest.virtualApp.appId + '/_manifest',
       JSON.stringify(this.manifest));
