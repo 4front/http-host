@@ -1,7 +1,22 @@
 var assert = require('assert');
-var pluginOptions = require('../lib/plugin-options');
 
 describe('pluginOptions', function() {
+  var crypto, pluginOptions;
+
+  before(function() {
+    crypto = {
+      encrypt: function(value) {
+        return new Buffer(value).toString('base64');
+      },
+      decrypt: function(value) {
+        return new Buffer(value, 'base64').toString('utf8');
+      }
+    };
+
+    pluginOptions = require('../lib/plugin-options')({
+      crypto: crypto
+    });
+  });
 
   describe('environment variable substitution', function() {
     it('env variable options', function() {
@@ -95,6 +110,27 @@ describe('pluginOptions', function() {
         option1: 'Bob',
         option2: {
           userId: '123'
+        }
+      });
+    });
+
+    it('decrypts encrypted user options', function() {
+      var options = {
+        headers: {
+          Authentication: "user:basicAuthToken"
+        }
+      };
+
+      var basicAuth = "Basic " + new Buffer("joe:password").toString("base64");
+      var expandedOptions = pluginOptions(options, {
+        user: {
+          basicAuthToken: { '__encrypted': crypto.encrypt(basicAuth) }
+        }
+      });
+
+      assert.deepEqual(expandedOptions, {
+        headers: {
+          Authentication: basicAuth
         }
       });
     });
