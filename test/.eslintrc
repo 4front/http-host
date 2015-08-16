@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "max-nested-callbacks": 0,
+    "no-unused-vars": 0,
+    "max-len": 0
+  }
+}
