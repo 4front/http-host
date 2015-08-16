@@ -9,9 +9,10 @@ var sbuff = require('simple-bufferstream');
 var testUtil = require('./test-util');
 var webPage = require('../lib/plugins/webpage');
 
+require('dash-assert');
+
 var self;
 describe('webPage', function() {
-
   beforeEach(function() {
     self = this;
 
@@ -21,7 +22,7 @@ describe('webPage', function() {
 
     this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
     this.server.settings.storage = {
-      readFileStream: sinon.spy(function(pagePath) {
+      readFileStream: sinon.spy(function() {
         return sbuff(self.pageContent);
       })
     };
@@ -35,8 +36,7 @@ describe('webPage', function() {
       virtualAppVersion: {
         versionId: shortid.generate(),
         name: 'v1'
-      },
-      isAuthenticated: false
+      }
     };
 
     this.server.use(function(req, res, next) {
@@ -153,7 +153,7 @@ describe('webPage', function() {
   });
 
   it('sets virtual app version header', function(done) {
-    var self = this;
+    self = this;
 
     this.extendedRequest.virtualAppVersion = {
       versionId: '345345'
@@ -163,6 +163,28 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect('Virtual-App-Version', this.extendedRequest.virtualAppVersion.versionId)
+      .end(done);
+  });
+
+  it('redirects to index.html when original path not found', function(done) {
+    this.server.settings.storage.readFileStream = function(pagePath) {
+      return createMissingStream();
+    };
+
+    this.server.settings.storage.fileExists = sinon.spy(function(pagePath, cb) {
+      cb(null, true);
+    });
+
+    supertest(this.server)
+      .get('/blog')
+      .expect(302)
+      .expect(function(res) {
+        assert.equal(res.headers.location, '/blog/');
+        assert.isTrue(self.server.settings.storage.fileExists.calledWith(
+          self.extendedRequest.virtualApp.appId + '/' + 
+          self.extendedRequest.virtualAppVersion.versionId +
+          '/blog/index.html'));
+      })
       .end(done);
   });
 
@@ -326,8 +348,17 @@ describe('webPage', function() {
 // Readable stream that emits an error
 function createErrorStream() {
   var rs = stream.Readable();
-  rs._read = function () {
+  rs._read = function() {
     rs.emit('error', 'read error');
+    rs.push(null);
+  };
+  return rs;
+}
+
+function createMissingStream() {
+  var rs = stream.Readable();
+  rs._read = function() {
+    rs.emit('missing');
     rs.push(null);
   };
   return rs;
