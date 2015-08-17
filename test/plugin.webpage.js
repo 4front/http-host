@@ -181,7 +181,7 @@ describe('webPage', function() {
       .expect(function(res) {
         assert.equal(res.headers.location, '/blog/');
         assert.isTrue(self.server.settings.storage.fileExists.calledWith(
-          self.extendedRequest.virtualApp.appId + '/' + 
+          self.extendedRequest.virtualApp.appId + '/' +
           self.extendedRequest.virtualAppVersion.versionId +
           '/blog/index.html'));
       })
@@ -200,6 +200,7 @@ describe('webPage', function() {
       supertest(this.server)
         .get('/')
         .expect(function(res) {
+          debugger;
           var clientConfig = parseClientConfig(res.text);
           assert.equal(clientConfig.buildType, 'release');
           assert.equal(clientConfig.webPagePath, 'index.html');
@@ -365,5 +366,5 @@ function createMissingStream() {
 }
 
 function parseClientConfig(text) {
-  return JSON.parse(text.match('__4front__=(.*);')[1]);
+  return JSON.parse(text.match(/__4front__=(.*);/)[1]);
 }
