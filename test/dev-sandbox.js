@@ -43,7 +43,7 @@ describe('devSandbox()', function(){
 
     this.devOptions = {
       port: 3000,
-      liveReload: '1',
+      autoReload: '1',
       token: jwt.encode({
         iss: this.userId,
         exp: Date.now() + 10000
