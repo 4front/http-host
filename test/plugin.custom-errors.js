@@ -28,7 +28,7 @@ describe('customErrors', function() {
     };
 
     this.server.settings.logger = {
-      error: sinon.spy(function(){})
+      error: sinon.spy(function() {})
     };
 
     this.virtualApp = {
@@ -62,7 +62,7 @@ describe('customErrors', function() {
       }
     };
 
-    this.error = Error.http(500, "Test error", {code: "testError"});;
+    this.error = Error.http(500, "Test error", {code: "testError"});
 
     this.server.get('/', function(req, res, next) {
       next(self.error);
@@ -145,7 +145,7 @@ describe('customErrors', function() {
 
   it('uses override loadPageMiddleware', function(done) {
     this.updateRequest = function(req) {
-      req.ext.loadPageMiddleware = function(req, res, next) {
+      req.ext.loadPageMiddleware = function(_req, res, next) {
         req.ext.webPageStream = sbuff("<html>special</html>");
         next();
       };
@@ -163,7 +163,7 @@ describe('customErrors', function() {
 
     this.options = {
       errors: {
-        "400": "errors/400.html"
+        400: "errors/400.html"
       }
     };
 

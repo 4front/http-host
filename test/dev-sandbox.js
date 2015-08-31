@@ -17,11 +17,11 @@ var testUtil = require('./test-util');
 require('dash-assert');
 require('simple-errors');
 
-describe('devSandbox()', function(){
+describe('devSandbox()', function() {
   var hostname = 'appname--dev.platformhost.com';
   var self;
 
-  beforeEach(function(){
+  beforeEach(function() {
     self = this;
 
     this.userId = shortid.generate();
@@ -59,7 +59,7 @@ describe('devSandbox()', function(){
 
     this.server.settings.cache = memoryCache();
     this.manifest = {
-      router:[]
+      router: []
     };
 
     this.server.settings.cache.set(
@@ -185,7 +185,7 @@ describe('devSandbox()', function(){
           },
           versionAssetPath: '//localhost:' + self.devOptions.port,
           buildType: 'debug',
-          cacheControl: 'no-cache',
+          cacheControl: 'no-cache'
         }, res.body));
       })
       .end(done);
