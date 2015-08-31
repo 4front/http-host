@@ -89,8 +89,12 @@ describe('devSandbox()', function() {
         .expect(function(res) {
           // Assert that the dev options are set in the cookie
           var setCookieHeader = res.headers['set-cookie'];
-          assert.equal(1, setCookieHeader.length);
-          var setCookie = querystring.parse(setCookieHeader[0]);
+          assert.equal(2, setCookieHeader.length);
+
+          // The first set-cookie should be clearing the _sandboxPage cookie
+          assert.isTrue(/_sandboxPage=;/.test(setCookieHeader[0]));
+
+          var setCookie = querystring.parse(setCookieHeader[1]);
           assert.deepEqual(cookieParser.JSONCookie(setCookie._dev.split(';')[0]), self.devOptions);
         })
         .end(done);

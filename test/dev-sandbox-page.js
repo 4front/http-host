@@ -41,7 +41,13 @@ describe('devSandbox()', function(){
       virtualEnv: 'dev',
       pagePath: 'index.html',
       developerId: this.user.userId,
-      virtualApp: this.virtualApp
+      virtualApp: this.virtualApp,
+      virtualAppVersion: {
+        versionId: shortid.generate(),
+        manifest: {
+          router: []
+        }
+      }
     };
 
     this.server = express();
@@ -88,7 +94,6 @@ describe('devSandbox()', function(){
 
             var redirectQuery = querystring.parse(redirectUrl.query);
             var returnUrl = parseUrl(redirectQuery.return);
-            console.log(returnUrl);
             assert.equal(returnUrl.pathname, '/somepage');
 
             redirectUrl.search = null;
@@ -160,9 +165,48 @@ describe('devSandbox()', function(){
     ], done);
   });
 
-  // function getHash(str) {
-  //   var shasum = crypto.createHash('sha1');
-  //   shasum.update(str);
-  //   return shasum.digest('hex');
-  // }
+  it('passes custom 404 page in redirect querystring', function(done) {
+    var custom404Page = "errors/404.html";
+
+    this.extendedRequest.virtualAppVersion.manifest.router.push({
+      module: "custom-errors",
+      options: {
+        "404": custom404Page
+      }
+    });
+
+    supertest(self.server)
+      .get('/somepage')
+      .expect(302)
+      .expect('set-cookie', /_sandboxPage\=1/)
+      .expect(function(res) {
+        var redirectUrl = parseUrl(res.headers.location);
+
+        var redirectQuery = querystring.parse(redirectUrl.query);
+        assert.equal(redirectQuery.custom404, custom404Page);
+      })
+      .end(done);
+  });
+
+  // it('passes custom 404 page in redirect querystring for custom route', function(done) {
+  //   var custom404Page = "errors/404.html";
+  //
+  //   this.extendedRequest.virtualAppVersion.manifest.router.push({
+  //     module: "custom-errors",
+  //     path: "/private",
+  //     options: {
+  //       "404": custom404Page
+  //     }
+  //   });
+  //
+  //   supertest(self.server)
+  //     .get('/private/somepage')
+  //     .expect(302)
+  //     .expect(function(res) {
+  //       var redirectUrl = parseUrl(res.headers.location);
+  //       var redirectQuery = querystring.parse(redirectUrl.query);
+  //       assert.equal(redirectQuery.custom404, custom404Page);
+  //     })
+  //     .end(done);
+  // });
 });
