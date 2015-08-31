@@ -171,7 +171,9 @@ describe('devSandbox()', function(){
     this.extendedRequest.virtualAppVersion.manifest.router.push({
       module: "custom-errors",
       options: {
-        "404": custom404Page
+        errors: {
+          "404": custom404Page
+        }
       }
     });
 
