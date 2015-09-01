@@ -74,6 +74,9 @@ describe('virtualRouter', function() {
         options: {
           value: 2
         }
+      },
+      {
+        module: 'echo'
       }
     ];
 
@@ -81,7 +84,8 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        assert.ok(_.isEqual(res.body.plugins, [1, 2]));
+        debugger;
+        assert.deepEqual(res.body.ext.plugins, [1, 2]);
       })
       .end(done);
   });
@@ -102,6 +106,9 @@ describe('virtualRouter', function() {
           value: 2
         },
         path: '/bar'
+      },
+      {
+        module: 'echo'
       }
     ];
 
@@ -109,7 +116,7 @@ describe('virtualRouter', function() {
       .get('/foo')
       .expect(200)
       .expect(function(res) {
-        assert.ok(_.isEqual(res.body.plugins, [1]));
+        assert.ok(_.isEqual(res.body.ext.plugins, [1]));
       })
       .end(done);
   });
@@ -245,6 +252,25 @@ describe('virtualRouter', function() {
       .expect(function(res) {
         assert.equal(contents, res.text);
       })
+      .end(done);
+  });
+
+  it('returns 404 if no standard route', function(done) {
+    this.manifest.router = [
+      {
+        module: 'sendtext',
+        path: '/hello'
+      },
+      {
+        module: 'err-handler',
+        errorHandler: true
+      }
+    ];
+
+    supertest(this.server)
+      .get('/')
+      .expect(404)
+      .expect("Error-Handler", 'err-handler')
       .end(done);
   });
 });
