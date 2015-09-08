@@ -38,7 +38,7 @@
     "ejs": "^2.3.1",
     "express-session": "^1.10.3",
     "get-parameter-names": "^0.2.0",
-    "htmlprep": "^1.0.13",
+    "htmlprep": "^1.0.14",
     "jwt-simple": "^0.3.0",
     "lodash": "^3.0.1",
     "path-to-regexp": "^1.2.0",
