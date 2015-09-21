@@ -8,16 +8,16 @@ var MemoryStore = require('express-session').MemoryStore;
 
 require('dash-assert');
 
-describe('session()', function(){
+describe('session()', function() {
   var server, sessionOptions, user;
 
-  beforeEach(function(){
+  beforeEach(function() {
     var self = this;
 
     server = express();
     server.enable('trust proxy');
     server.settings.sessionSecret = '123';
-    server.settings.sessionStore = new MemoryStore;
+    server.settings.sessionStore = new MemoryStore();
 
     user = {userId: 5};
     sessionOptions = {};
@@ -41,7 +41,7 @@ describe('session()', function(){
     });
   });
 
-  it('set session cookie with expires', function(done){
+  it('set session cookie with expires', function(done) {
     sessionOptions.timeoutMinutes = 60;
 
     supertest(server)
@@ -49,7 +49,6 @@ describe('session()', function(){
       .set('x-forwarded-proto', 'https')
       .expect(200)
       .expect(function(res) {
-
         var setCookie = res.headers['set-cookie'][0];
         assert.ok(/^4front\.sessionid=[a-z0-9%\.]+/.test(setCookie));
         assert.ok(/Expires=.* GMT;/.test(setCookie))
@@ -67,7 +66,7 @@ describe('session()', function(){
       .end(done);
   });
 
-  it('set session cookie without expires', function(done){
+  it('set session cookie without expires', function(done) {
     supertest(server)
       .get('/')
       .set('x-forwarded-proto', 'https')
@@ -76,6 +75,8 @@ describe('session()', function(){
         var setCookie = res.headers['set-cookie'][0];
         assert.isTrue(/^4front\.sessionid=[a-z0-9%\.]+/.test(setCookie));
         assert.isFalse(/Expires=/i.test(setCookie));
+        assert.isTrue(res.body.session.cookie.secure);
+        assert.isTrue(res.body.session.cookie.httpOnly);
       })
       .end(done);
   });
