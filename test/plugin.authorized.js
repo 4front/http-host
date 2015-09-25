@@ -16,7 +16,10 @@ describe('authorized', function() {
 
     this.server = express();
 
-    user = {};
+    user = {
+      userId: '123',
+      username: 'fred'
+    };
 
     this.sessionStub = {
       user: user,
@@ -79,7 +82,7 @@ describe('authorized', function() {
 
       // Require auth on the app root
       authorizedOptions.routes.push({
-        path: "/",
+        path: "/"
       });
     });
 
