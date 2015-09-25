@@ -9,10 +9,10 @@ var _ = require('lodash');
 var testUtil = require('./test-util');
 var debug = require('debug');
 
-describe('trafficControl()', function(){
+describe('trafficControl()', function() {
   var server;
 
-  beforeEach(function(){
+  beforeEach(function() {
     var self = this;
 
     this.server = express();
@@ -28,7 +28,7 @@ describe('trafficControl()', function(){
       virtualApp: {
         trafficRules: {
           production: [
-            {rule: '*', versionId:'1'}
+            {rule: '*', versionId: '1'}
           ]
         }
       },
@@ -51,8 +51,8 @@ describe('trafficControl()', function(){
     this.server.use(testUtil.errorHandler);
   });
 
-  describe('passing _version querystring', function(){
-    it('should set cookie and redirect', function(done){
+  describe('passing _version querystring', function() {
+    it('should set cookie and redirect', function(done) {
       request(this.server)
         .get('/?_version=abc')
         .set('Host', 'testapp.platform.com')
@@ -76,7 +76,7 @@ describe('trafficControl()', function(){
     it('should use that version', function(done) {
       request(this.server)
         .get('/')
-        .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId:'1.1.1', method:'urlOverride'})))
+        .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId: '1.1.1', method: 'urlOverride'})))
         .expect(200)
         .expect('Virtual-App-Version-Method', 'urlOverride')
         .expect('Virtual-App-Version-Id', '1.1.1')
@@ -113,14 +113,14 @@ describe('trafficControl()', function(){
     request(this.server)
       .get('/')
       .expect(404)
-      .expect('Error-Code', "noTrafficRulesForEnvironment")
+      .expect('Error-Code', "noLiveVersions")
       .end(done);
   });
 
   describe('version in cookie does not exist', function() {
     it('falls back to traffic control rules', function(done) {
       this.server.settings.database.getVersion = function(appId, versionId, callback) {
-        if (versionId == '2')
+        if (versionId === '2')
           callback(null, null);
         else
           callback(null, {versionId: versionId});
