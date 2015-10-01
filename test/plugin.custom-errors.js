@@ -18,7 +18,7 @@ describe('customErrors', function() {
 
     this.server = express();
     this.server.settings.storage = {
-      readFileStream: sinon.spy(function(pathPath) {
+      readFileStream: sinon.spy(function() {
         return sbuff("<html>custom error</html>");
       })
     };
@@ -87,7 +87,7 @@ describe('customErrors', function() {
       .expect('Cache-Control', 'no-cache')
       .expect('Error-Code', 'testError')
       .expect("<html>custom error</html>")
-      .expect(function(res) {
+      .expect(function() {
         assert.ok(self.server.settings.storage.readFileStream.calledWith(
           urljoin(self.virtualApp.appId,
             self.virtualAppVersion.versionId,
@@ -132,7 +132,7 @@ describe('customErrors', function() {
   });
 
   it('advances to fallback if page stream missing', function(done) {
-    this.server.settings.storage.readFileStream = function(filePath) {
+    this.server.settings.storage.readFileStream = function() {
       return testUtil.createMissingStream();
     };
 

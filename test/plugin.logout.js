@@ -4,12 +4,10 @@ var session = require('express-session');
 var supertest = require('supertest');
 var assert = require('assert');
 
-describe('logout()', function(){
+describe('logout()', function() {
   var server;
 
-  beforeEach(function(){
-    var self = this;
-
+  beforeEach(function() {
     server = express();
 
     server.use(session({
@@ -25,8 +23,8 @@ describe('logout()', function(){
     }));
   });
 
-  describe('logout()', function(){
-    it('should redirect to index page', function(done){
+  describe('logout()', function() {
+    it('should redirect to index page', function(done) {
       supertest(server)
         .get('/logout')
         .set('Cookie', '4front.sessionid=abcd')
