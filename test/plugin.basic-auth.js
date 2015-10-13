@@ -5,7 +5,8 @@ var supertest = require('supertest');
 var assert = require('assert');
 
 describe('basicAuth()', function() {
-  var server, self;
+  var server;
+  var self;
 
   beforeEach(function() {
     self = this;
