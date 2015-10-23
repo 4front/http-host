@@ -49,7 +49,7 @@ describe('webPage', function() {
     this.server.get('/*', webPage(this.options));
 
     this.server.all('*', function(req, res, next) {
-      next(Error.http(404, "Page not found", {code: "pageNotFound"}));
+      next(Error.http(404, 'Page not found', {code: 'pageNotFound'}));
     });
 
     this.server.use(testUtil.errorHandler);
@@ -119,7 +119,7 @@ describe('webPage', function() {
   });
 
   it('returns 404 status code', function(done) {
-    this.server.settings.storage.readFileStream = function(pagePath) {
+    this.server.settings.storage.readFileStream = function() {
       return createErrorStream()
         .on('error', function() {
           // Emit custom missing event
@@ -167,7 +167,7 @@ describe('webPage', function() {
   });
 
   it('redirects to index.html when original path not found', function(done) {
-    this.server.settings.storage.readFileStream = function(pagePath) {
+    this.server.settings.storage.readFileStream = function() {
       return createMissingStream();
     };
 
@@ -194,13 +194,10 @@ describe('webPage', function() {
         versionId: '345345',
         name: 'version1'
       };
-      // var version = this.extendedRequest.virtualAppVersion;
-      var virtualApp = this.extendedRequest.virtualApp;
 
       supertest(this.server)
         .get('/')
         .expect(function(res) {
-          debugger;
           var clientConfig = parseClientConfig(res.text);
           assert.equal(clientConfig.buildType, 'release');
           assert.equal(clientConfig.webPagePath, 'index.html');
@@ -324,26 +321,33 @@ describe('webPage', function() {
       .end(done);
   });
 
-  describe('non html pages', function() {
-    it('renders a sitemap.xml', function(done) {
-      this.pageContent = '<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
-      this.options.contentType = 'application/xml';
-
-      supertest(this.server)
-        .get('/sitemap.xml')
-        .expect(200)
-        .expect('Content-Type', 'application/xml')
-        .expect(function(res) {
-          assert.ok(self.server.settings.storage.readFileStream.calledWith(
-            urljoin(self.extendedRequest.virtualApp.appId,
-              self.extendedRequest.virtualAppVersion.versionId,
-              'sitemap.xml')));
-
-          assert.equal(res.text, self.pageContent);
-        })
-        .end(done);
-    });
+  it('it takes a pass on non-html files', function(done) {
+    supertest(this.server)
+      .get('/image.png')
+      .expect(404)
+      .end(done);
   });
+
+  // describe('non html pages', function() {
+  //   it('renders a sitemap.xml', function(done) {
+  //     this.pageContent = '<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
+  //     this.options.contentType = 'application/xml';
+  //
+  //     supertest(this.server)
+  //       .get('/sitemap.xml')
+  //       .expect(200)
+  //       .expect('Content-Type', 'application/xml')
+  //       .expect(function(res) {
+  //         assert.ok(self.server.settings.storage.readFileStream.calledWith(
+  //           urljoin(self.extendedRequest.virtualApp.appId,
+  //             self.extendedRequest.virtualAppVersion.versionId,
+  //             'sitemap.xml')));
+  //
+  //         assert.equal(res.text, self.pageContent);
+  //       })
+  //       .end(done);
+  //   });
+  // });
 });
 
 // Readable stream that emits an error
