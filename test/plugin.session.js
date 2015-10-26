@@ -1,4 +1,3 @@
-var logout = require('../lib/plugins/logout');
 var express = require('express');
 var session = require('../lib/plugins/session');
 var supertest = require('supertest');
@@ -12,8 +11,6 @@ describe('session()', function() {
   var server, sessionOptions, user;
 
   beforeEach(function() {
-    var self = this;
-
     server = express();
     server.enable('trust proxy');
     server.settings.sessionSecret = '123';
@@ -50,8 +47,8 @@ describe('session()', function() {
       .expect(200)
       .expect(function(res) {
         var setCookie = res.headers['set-cookie'][0];
-        assert.ok(/^4front\.sessionid=[a-z0-9%\.]+/.test(setCookie));
-        assert.ok(/Expires=.* GMT;/.test(setCookie))
+        assert.ok(/^sessionId=[a-z0-9%\.]+/.test(setCookie));
+        assert.ok(/Expires=.* GMT;/.test(setCookie));
 
         assert.isString(res.body.sessionID);
         assert.deepEqual(res.body.session.user, user);
@@ -73,7 +70,7 @@ describe('session()', function() {
       .expect(200)
       .expect(function(res) {
         var setCookie = res.headers['set-cookie'][0];
-        assert.isTrue(/^4front\.sessionid=[a-z0-9%\.]+/.test(setCookie));
+        assert.isTrue(/^sessionId=[a-z0-9%\.]+/.test(setCookie));
         assert.isFalse(/Expires=/i.test(setCookie));
         assert.isTrue(res.body.session.cookie.secure);
         assert.isTrue(res.body.session.cookie.httpOnly);

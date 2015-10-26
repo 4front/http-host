@@ -2,6 +2,7 @@ var assert = require('assert');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
+var _ = require('lodash');
 var staticAssetRedirect = require('../lib/middleware/static-asset-redirect');
 
 describe('staticAssetRedirect', function() {
@@ -11,34 +12,35 @@ describe('staticAssetRedirect', function() {
     self = this;
     this.server = express();
     this.server.set('trust proxy', true);
-    this.server.settings.deployedAssetsPath = "somecdn.com";
+    this.server.settings.deployedAssetsPath = 'somecdn.com';
 
     this.appId = shortid.generate();
     this.versionId = shortid.generate();
 
-    this.server.use(function(req, res, next) {
-      req.ext = {
-        virtualApp: {
-          appId: self.appId
-        },
-        virtualAppVersion: {
-          versionId: self.versionId
-        }
-      };
+    this.extendedRequest = {
+      virtualApp: {
+        appId: self.appId
+      },
+      virtualAppVersion: {
+        versionId: self.versionId
+      }
+    };
 
+    this.server.use(function(req, res, next) {
+      req.ext = self.extendedRequest;
       next();
     });
 
     this.server.use(staticAssetRedirect());
 
     this.server.use(function(req, res, next) {
-      res.send("html");
+      res.send('html');
     });
   });
 
   it('redirects to absolute url when deployedAssetsPath is a CDN', function(done) {
     supertest(this.server)
-      .get("/images/logo.png")
+      .get('/images/logo.png')
       .expect(302)
       .expect(function(res) {
         assert.equal(res.headers.location, 'http://somecdn.com/' + self.appId + '/' + self.versionId + '/images/logo.png');
@@ -48,7 +50,7 @@ describe('staticAssetRedirect', function() {
 
   it('redirects to https absolute url when deployedAssetsPath is a CDN', function(done) {
     supertest(this.server)
-      .get("/images/logo.png")
+      .get('/images/logo.png')
       .set('X-Forwarded-Proto', 'https')
       .set('X-Forwarded-For', 'blah.app.com')
       .expect(302)
@@ -62,7 +64,7 @@ describe('staticAssetRedirect', function() {
     this.server.settings.deployedAssetsPath = '/deployments';
 
     supertest(this.server)
-      .get("/images/logo.gif")
+      .get('/images/logo.gif')
       .expect(302)
       .expect(function(res) {
         assert.equal(res.headers.location, '/deployments/' + self.appId + '/' + self.versionId + '/images/logo.gif');
@@ -74,7 +76,7 @@ describe('staticAssetRedirect', function() {
     this.server.settings.deployedAssetsPath = '/deployments';
 
     supertest(this.server)
-      .get("/pages/blog")
+      .get('/pages/blog')
       .expect(200)
       .expect('html')
       .end(done);
@@ -97,6 +99,21 @@ describe('staticAssetRedirect', function() {
         assert.equal(res.headers.location, 'http://somecdn.com/'
           + self.appId + '/' + self.versionId + '/views/about.html');
       })
+      .end(done);
+  });
+
+  it('redirects requests in dev mode to localhost', function(done) {
+    _.extend(this.extendedRequest, {
+      virtualEnv: 'dev',
+      devOptions: {
+        port: 3000
+      }
+    });
+
+    supertest(this.server)
+      .get('/js/app.js')
+      .expect(302)
+      .expect('location', 'http://localhost:3000/js/app.js')
       .end(done);
   });
 });

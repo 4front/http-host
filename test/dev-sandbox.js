@@ -1,3 +1,4 @@
+/* eslint new-cap: 0 */
 
 var assert = require('assert');
 var sinon = require('sinon');
@@ -6,8 +7,6 @@ var devSandbox = require('../lib/middleware/dev-sandbox');
 var querystring = require('querystring');
 var express = require('express');
 var request = require('supertest');
-var urljoin = require('url-join');
-var _ = require('lodash');
 var debug = require('debug');
 var cookieParser = require('cookie-parser');
 var shortid = require('shortid');
@@ -85,7 +84,7 @@ describe('devSandbox()', function() {
         .get('/__login?' + querystring.stringify(this.devOptions))
         .set('Host', hostname)
         .expect(302)
-        .expect("location", "/")
+        .expect('location', '/')
         .expect(function(res) {
           // Assert that the dev options are set in the cookie
           var setCookieHeader = res.headers['set-cookie'];
@@ -107,7 +106,7 @@ describe('devSandbox()', function() {
         .get('/__login?' + querystring.stringify(this.devOptions))
         .set('Host', hostname)
         .expect(401)
-        .expect('Error-Code', "missingDevToken")
+        .expect('Error-Code', 'missingDevToken')
         .end(done);
     });
 
@@ -152,16 +151,6 @@ describe('devSandbox()', function() {
     });
   });
 
-  it('redirects static asset requests', function(done) {
-    request(this.server)
-      .get('/js/app.js')
-      .set('Host', hostname)
-      .set('Cookie', createDevCookie(this.devOptions))
-      .expect(302)
-      .expect("location", "http://localhost:3000/js/app.js")
-      .end(done);
-  });
-
   it('returns error for missing manifest', function(done) {
     this.server.settings.cache.del(this.userId + '/' + this.virtualApp.appId + '/_manifest');
 
@@ -196,6 +185,6 @@ describe('devSandbox()', function() {
   });
 
   function createDevCookie(devOptions) {
-    return '_dev=' + encodeURIComponent('j:' + JSON.stringify(devOptions))
+    return '_dev=' + encodeURIComponent('j:' + JSON.stringify(devOptions));
   }
 });
