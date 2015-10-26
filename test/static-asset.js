@@ -11,7 +11,7 @@ describe('staticAsset', function() {
   beforeEach(function() {
     self = this;
     this.server = express();
-    this.server.settings.deployedAssetsPath = "/deployments";
+    this.server.settings.deployedAssetsPath = '/deployments';
 
     this.server.settings.deployer = {
       serve: function(appId, versionId, filePath, res) {
@@ -28,13 +28,13 @@ describe('staticAsset', function() {
     this.server.use(staticAsset());
 
     this.server.use(function(req, res, next) {
-      res.status(404).send("not found");
+      res.status(404).send('not found');
     });
   });
 
   it('serves static asset', function(done) {
     supertest(this.server)
-      .get(urljoin(this.server.settings.deployedAssetsPath, this.appId, this.versionId, "images/logo.png"))
+      .get(urljoin(this.server.settings.deployedAssetsPath, this.appId, this.versionId, 'images/logo.png'))
       .expect(200)
       .expect(function(res) {
         assert.deepEqual(res.body, {

@@ -2,7 +2,6 @@ var assert = require('assert');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
-var path = require('path');
 var _ = require('lodash');
 var staticAssetRedirect = require('../lib/middleware/static-asset-redirect');
 
@@ -115,17 +114,6 @@ describe('staticAssetRedirect', function() {
       .get('/js/app.js')
       .expect(302)
       .expect('location', 'http://localhost:3000/js/app.js')
-      .end(done);
-  });
-
-  it('renders the default favicon', function(done) {
-    this.extendedRequest.virtualEnv = 'dev';
-    this.server.settings.faviconPath = path.join(__dirname, './fixtures/favicon.ico');
-
-    supertest(this.server)
-      .get('/favicon.ico?default=1')
-      .expect('Content-Type', 'image/x-icon')
-      .expect(200)
       .end(done);
   });
 });
