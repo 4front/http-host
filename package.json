@@ -19,12 +19,7 @@
     "dev"
   ],
   "author": "David Von Lehman",
-  "licenses": [
-    {
-      "type": "Apache-2.0",
-      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-    }
-  ],
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/4front/apphost/issues"
   },
@@ -43,6 +38,7 @@
     "jwt-simple": "^0.3.0",
     "lodash": "^3.0.1",
     "path-to-regexp": "^1.2.0",
+    "serve-favicon": "^2.3.0",
     "simple-errors": "^1.0.0",
     "uid-safe": "^2.0.0",
     "url-join": "0.0.1"
