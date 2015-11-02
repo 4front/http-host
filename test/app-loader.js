@@ -1,8 +1,8 @@
+/* eslint no-console: 0 */
 
 var assert = require('assert');
 var sinon = require('sinon');
 var virtualAppLoader = require('../lib/middleware/app-loader');
-var querystring = require('querystring');
 var express = require('express');
 var shortid = require('shortid');
 var request = require('supertest');
@@ -11,10 +11,10 @@ var debug = require('debug');
 
 require('dash-assert');
 
-describe('virtualAppLoader()', function(){
+describe('virtualAppLoader()', function() {
   var self;
 
-  beforeEach(function(){
+  beforeEach(function() {
     self = this;
 
     this.server = express();
@@ -49,14 +49,14 @@ describe('virtualAppLoader()', function(){
       if (res.statusCode === 500) {
         console.log(err.stack);
         res.end(err.stack);
-      }
-      else
+      } else {
         res.end();
+      }
     });
   });
 
-  describe('virtual env in host', function(){
-    it('should recognize prefix format', function(done){
+  describe('virtual env in host', function() {
+    it('should recognize prefix format', function(done) {
       request(this.server)
         .get('/')
         .set('Host', 'appname--test.testapps.com')
@@ -69,7 +69,7 @@ describe('virtualAppLoader()', function(){
         .end(done);
     });
 
-    it('should default to prod when no env found', function(done){
+    it('should default to prod when no env found', function(done) {
       this.server.settings.defaultVirtualEnvironment = 'staging';
 
       request(this.server)
@@ -87,7 +87,7 @@ describe('virtualAppLoader()', function(){
   describe('virtualAppRegistry returns null', function() {
     it('should return 404', function(done) {
       this.server.settings.virtualAppRegistry.getByName = function(name, cb) {
-        cb(null, null)
+        cb(null, null);
       };
 
       request(this.server)
@@ -98,19 +98,43 @@ describe('virtualAppLoader()', function(){
   });
 
   describe('request with custom domain', function() {
-    it('should call findApp passing in a domain', function(done) {
-      var customDomain = "www.custom-domain.com";
+    beforeEach(function() {
+      self = this;
+    });
 
-      this.server.settings.virtualAppRegistry.getByDomain = function(domain, callback) {
+    it('should call findApp passing in a domain', function(done) {
+      var customDomain = {domain: 'www.custom-domain.com'};
+
+      this.server.settings.virtualAppRegistry.getByDomain = sinon.spy(function(domain, callback) {
         callback(null, {domain: customDomain});
-      };
+      });
 
       request(this.server)
         .get('/')
-        .set('Host', customDomain)
+        .set('Host', customDomain.domain)
         .expect(200)
         .expect(function(res) {
-          assert.equal(res.body.virtualApp.domain, customDomain);
+          assert.isTrue(self.server.settings.virtualAppRegistry.getByDomain.calledWith(customDomain.domain));
+          assert.deepEqual(res.body.virtualApp.domain, customDomain);
+        })
+        .end(done);
+    });
+
+    it('should redirect custom domain with action of redirect', function(done) {
+      var customDomain = {domain: 'custom-domain.com', action: 'redirect'};
+      var appUrl = 'http://www.custom-domain.com';
+
+      this.server.settings.virtualAppRegistry.getByDomain = sinon.spy(function(domain, callback) {
+        callback(null, {domain: customDomain, url: appUrl});
+      });
+
+      request(this.server)
+        .get('/')
+        .set('Host', customDomain.domain)
+        .expect(301)
+        .expect(function(res) {
+          assert.isTrue(self.server.settings.virtualAppRegistry.getByDomain.calledWith(customDomain.domain));
+          assert.equal(res.headers.location, appUrl);
         })
         .end(done);
     });
