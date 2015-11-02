@@ -8,6 +8,7 @@ var sbuff = require('simple-bufferstream');
 var testUtil = require('./test-util');
 var customErrors = require('../lib/plugins/custom-errors');
 
+require('dash-assert');
 require('simple-errors');
 
 describe('customErrors', function() {
@@ -19,7 +20,7 @@ describe('customErrors', function() {
     this.server = express();
     this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        return sbuff("<html>custom error</html>");
+        return sbuff('<html>custom error</html>');
       })
     };
 
@@ -48,21 +49,22 @@ describe('customErrors', function() {
         virtualAppVersion: self.virtualAppVersion
       };
 
-      if (_.isFunction(self.updateRequest))
+      if (_.isFunction(self.updateRequest)) {
         self.updateRequest(req);
+      }
 
       next();
     });
 
     this.options = {
       errors: {
-        500: "500.html",
-        400: "400.html",
-        401: "401.html"
+        500: '500.html',
+        400: '400.html',
+        401: '401.html'
       }
     };
 
-    this.error = Error.http(500, "Test error", {code: "testError"});
+    this.error = Error.http(500, 'Test error', {code: 'testError'});
 
     this.server.get('/', function(req, res, next) {
       next(self.error);
@@ -86,26 +88,27 @@ describe('customErrors', function() {
       .expect('Content-Type', /text\/html/)
       .expect('Cache-Control', 'no-cache')
       .expect('Error-Code', 'testError')
-      .expect("<html>custom error</html>")
-      .expect(function() {
+      .expect('<html>custom error</html>')
+      .expect(function(res) {
         assert.ok(self.server.settings.storage.readFileStream.calledWith(
           urljoin(self.virtualApp.appId,
             self.virtualAppVersion.versionId,
             '500.html')));
 
+        assert.ok(res.headers.etag);
         assert.ok(self.server.settings.logger.error.called);
       })
       .end(done);
   });
 
   it('bypasses custom error if bypassCustomErrorPage', function(done) {
-    this.error = Error.http(404, "Test error", {bypassCustomErrorPage: true});
+    this.error = Error.http(404, 'Test error', {bypassCustomErrorPage: true});
 
     supertest(this.server)
       .get('/')
       .expect(404)
       .expect('Error-Handler', 'fallback')
-      .expect("Test error")
+      .expect('Test error')
       .end(done);
   });
 
@@ -146,7 +149,7 @@ describe('customErrors', function() {
   it('uses override loadPageMiddleware', function(done) {
     this.updateRequest = function(req) {
       req.ext.loadPageMiddleware = function(_req, res, next) {
-        req.ext.webPageStream = sbuff("<html>special</html>");
+        req.ext.webPageStream = sbuff('<html>special</html>');
         next();
       };
     };
@@ -154,16 +157,16 @@ describe('customErrors', function() {
     supertest(this.server)
       .get('/')
       .expect(500)
-      .expect("<html>special</html>")
+      .expect('<html>special</html>')
       .end(done);
   });
 
   it('works with string error code options', function(done) {
-    this.error = Error.http(400, "Test error");
+    this.error = Error.http(400, 'Test error');
 
     this.options = {
       errors: {
-        400: "errors/400.html"
+        400: 'errors/400.html'
       }
     };
 

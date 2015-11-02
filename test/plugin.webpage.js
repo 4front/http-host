@@ -1,4 +1,5 @@
 var assert = require('assert');
+var async = require('async');
 var sinon = require('sinon');
 var express = require('express');
 var shortid = require('shortid');
@@ -326,6 +327,51 @@ describe('webPage', function() {
       .get('/image.png')
       .expect(404)
       .end(done);
+  });
+
+  it('ETag varies when clientConfig changes', function(done) {
+    var initialETag;
+    async.series([
+      function(cb) {
+        supertest(self.server)
+          .get('/')
+          .expect(200)
+          .expect('content-type', /^text\/html/)
+          .expect(function(res) {
+            assert.isTrue(self.server.settings.storage.readFileStream.called);
+            assert.ok(res.headers.etag);
+            initialETag = res.headers.etag;
+          })
+          .end(cb);
+      },
+      function(cb) {
+        self.server.settings.storage.readFileStream.reset();
+        supertest(self.server)
+          .get('/')
+          .set('If-None-Match', initialETag)
+          .expect(304)
+          .expect(function(res) {
+            assert.isFalse(self.server.settings.storage.readFileStream.called);
+          })
+          .end(cb);
+      },
+      function(cb) {
+        self.server.settings.storage.readFileStream.reset();
+        // Change the versionId which should result in a different etag.
+        self.extendedRequest.virtualAppVersion.versionId = shortid.generate();
+
+        supertest(self.server)
+          .get('/')
+          .set('If-None-Match', initialETag)
+          .expect(200)
+          .expect(function(res) {
+            assert.isTrue(self.server.settings.storage.readFileStream.called);
+            assert.ok(res.headers.etag);
+            assert.isFalse(res.headers.etag === initialETag);
+          })
+          .end(cb);
+      }
+    ], done);
   });
 
   // describe('non html pages', function() {
