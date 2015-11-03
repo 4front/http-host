@@ -5,7 +5,7 @@ var async = require('async');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
-var sbuff = require('simple-bufferstream');
+var streamTestUtils = require('./stream-test-utils');
 var staticAsset = require('../lib/middleware/static-asset');
 
 require('dash-assert');
@@ -27,7 +27,7 @@ describe('staticAsset', function() {
 
         res.setHeader('Content-Type', mime.lookup(filePath));
 
-        sbuff(self.responseText).pipe(res);
+        streamTestUtils.buffer(self.responseText).pipe(res);
       })
     };
 

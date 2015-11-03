@@ -4,8 +4,7 @@ var supertest = require('supertest');
 var _ = require('lodash');
 var assert = require('assert');
 var sinon = require('sinon');
-var sbuff = require('simple-bufferstream');
-var testUtil = require('./test-util');
+var streamTestUtils = require('./stream-test-utils');
 var customErrors = require('../lib/plugins/custom-errors');
 
 require('dash-assert');
@@ -20,7 +19,7 @@ describe('customErrors', function() {
     this.server = express();
     this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        return sbuff('<html>custom error</html>');
+        return streamTestUtils.buffer('<html>custom error</html>');
       })
     };
 
@@ -136,7 +135,7 @@ describe('customErrors', function() {
 
   it('advances to fallback if page stream missing', function(done) {
     this.server.settings.storage.readFileStream = function() {
-      return testUtil.createMissingStream();
+      return streamTestUtils.emitter('missing');
     };
 
     supertest(this.server)
@@ -149,7 +148,7 @@ describe('customErrors', function() {
   it('uses override loadPageMiddleware', function(done) {
     this.updateRequest = function(req) {
       req.ext.loadPageMiddleware = function(_req, res, next) {
-        req.ext.webPageStream = sbuff('<html>special</html>');
+        req.ext.webPageStream = streamTestUtils.buffer('<html>special</html>');
         next();
       };
     };

@@ -3,10 +3,9 @@ var async = require('async');
 var sinon = require('sinon');
 var express = require('express');
 var shortid = require('shortid');
-var stream = require('stream');
 var supertest = require('supertest');
 var urljoin = require('url-join');
-var sbuff = require('simple-bufferstream');
+var streamTestUtils = require('./stream-test-utils');
 var testUtil = require('./test-util');
 var webPage = require('../lib/plugins/webpage');
 
@@ -24,7 +23,7 @@ describe('webPage', function() {
     this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
     this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        return sbuff(self.pageContent);
+        return streamTestUtils.buffer(self.pageContent);
       })
     };
 
@@ -121,7 +120,7 @@ describe('webPage', function() {
 
   it('returns 404 status code', function(done) {
     this.server.settings.storage.readFileStream = function() {
-      return createErrorStream()
+      return streamTestUtils.emitter('missing')
         .on('error', function() {
           // Emit custom missing event
           this.emit('missing');
@@ -169,7 +168,7 @@ describe('webPage', function() {
 
   it('redirects to index.html when original path not found', function(done) {
     this.server.settings.storage.readFileStream = function() {
-      return createMissingStream();
+      return streamTestUtils.emitter('missing');
     };
 
     this.server.settings.storage.fileExists = sinon.spy(function(pagePath, cb) {
@@ -395,25 +394,6 @@ describe('webPage', function() {
   //   });
   // });
 });
-
-// Readable stream that emits an error
-function createErrorStream() {
-  var rs = stream.Readable();
-  rs._read = function() {
-    rs.emit('error', 'read error');
-    rs.push(null);
-  };
-  return rs;
-}
-
-function createMissingStream() {
-  var rs = stream.Readable();
-  rs._read = function() {
-    rs.emit('missing');
-    rs.push(null);
-  };
-  return rs;
-}
 
 function parseClientConfig(text) {
   return JSON.parse(text.match(/__4front__=(.*);/)[1]);

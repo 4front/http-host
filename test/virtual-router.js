@@ -1,11 +1,12 @@
+/* eslint no-console: 0 */
+
 var express = require('express');
 var supertest = require('supertest');
 var _ = require('lodash');
+var streamTestUtils = require('./stream-test-utils');
 var virtualRouter = require('../lib/middleware/virtual-router');
 var assert = require('assert');
 var path = require('path');
-var sbuff = require('simple-bufferstream');
-var querystring = require('querystring');
 
 // TODO: Need to support 4 arrity middleware
 describe('virtualRouter', function() {
@@ -36,8 +37,8 @@ describe('virtualRouter', function() {
 
     virtualRouterOptions = {
       builtInPluginsDir: [
-        path.join(__dirname, "./fixtures/plugins"),
-        path.join(__dirname, "../lib/plugins")
+        path.join(__dirname, './fixtures/plugins'),
+        path.join(__dirname, '../lib/plugins')
       ],
       autoIncludeWebpagePlugin: false
     };
@@ -52,8 +53,9 @@ describe('virtualRouter', function() {
 
     this.server.use(function(err, req, res, next) {
       res.statusCode = err.status || 500;
-      if (res.statusCode >= 500 && res.statusCode !== 506)
+      if (res.statusCode >= 500 && res.statusCode !== 506) {
         console.log(err.stack || err.message || err.toString());
+      }
 
       res.json(err);
     });
@@ -84,7 +86,6 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        debugger;
         assert.deepEqual(res.body.ext.plugins, [1, 2]);
       })
       .end(done);
@@ -132,7 +133,7 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(506)
       .expect(function(res) {
-        assert.equal(res.body.code, "pluginLoadError")
+        assert.equal(res.body.code, 'pluginLoadError');
       })
       .end(done);
   });
@@ -150,7 +151,7 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(506)
       .expect(function(res) {
-        assert.equal(res.body.code, "invalidVirtualRouteMethod")
+        assert.equal(res.body.code, 'invalidVirtualRouteMethod');
       })
       .end(done);
   });
@@ -181,8 +182,8 @@ describe('virtualRouter', function() {
       .end(done);
   });
 
-  it("passes error to error handler middleware", function(done) {
-    var errorMessage = "forced error";
+  it('passes error to error handler middleware', function(done) {
+    var errorMessage = 'forced error';
     this.manifest.router = [
       {
         module: 'next-error',
@@ -199,19 +200,19 @@ describe('virtualRouter', function() {
     supertest(this.server)
       .get('/options')
       .expect(400)
-      .expect("Error-Handler", 'err-handler')
+      .expect('Error-Handler', 'err-handler')
       .expect(errorMessage)
       .end(done);
   });
 
   it('uses default router if no manifest', function(done) {
-    var contents = "<html></html>";
+    var contents = '<html></html>';
 
     virtualRouterOptions.autoIncludeWebpagePlugin = true;
 
     this.server.settings.storage = {
       readFileStream: function() {
-        return sbuff(contents);
+        return streamTestUtils.buffer(contents);
       }
     };
 
@@ -236,12 +237,12 @@ describe('virtualRouter', function() {
       }
     ];
 
-    var contents = "<html></html>";
+    var contents = '<html></html>';
     virtualRouterOptions.autoIncludeWebpagePlugin = true;
 
     this.server.settings.storage = {
       readFileStream: function() {
-        return sbuff(contents);
+        return streamTestUtils.buffer(contents);
       }
     };
 
@@ -256,6 +257,18 @@ describe('virtualRouter', function() {
   });
 
   it('returns 404 if no standard route', function(done) {
+    this.server.settings.deployer = {
+      serve: function(appId, versionId, filePath, res, next) {
+        next();
+      }
+    };
+
+    this.server.settings.storage = {
+      readFileStream: function() {
+        return streamTestUtils.emitter('missing');
+      }
+    };
+
     this.manifest.router = [
       {
         module: 'sendtext',
@@ -270,7 +283,7 @@ describe('virtualRouter', function() {
     supertest(this.server)
       .get('/')
       .expect(404)
-      .expect("Error-Handler", 'err-handler')
+      .expect('Error-Handler', 'err-handler')
       .end(done);
   });
 });
