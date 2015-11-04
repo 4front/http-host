@@ -17,6 +17,12 @@ describe('isStaticAsset', function() {
     assert.isFalse(isStaticAsset.html({path: '/js/main.js'}));
   });
 
+  it('image', function() {
+    assert.isTrue(isStaticAsset.image({path: '/images/photo.png'}));
+    assert.isTrue(isStaticAsset.image({path: '/images/profile.jpg'}));
+    assert.isFalse(isStaticAsset.image({path: '/js/main.js'}));
+  });
+
   it('htmlXhr', function() {
     assert.isFalse(isStaticAsset.htmlXhr({path: '/templates/home.html'}));
     assert.isTrue(isStaticAsset.htmlXhr({path: '/templates/home.html', xhr: true}));
