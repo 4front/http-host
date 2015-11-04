@@ -1,5 +1,6 @@
 var assert = require('assert');
 var sinon = require('sinon');
+var _ = require('lodash');
 var urljoin = require('url-join');
 var async = require('async');
 var express = require('express');
@@ -30,11 +31,15 @@ describe('staticAsset', function() {
       })
     };
 
-    this.server.settings.staticAssetMaxAge = 500000;
+    _.extend(this.server.settings, {
+      staticAssetMaxAge: 500000,
+      deployedAssetsPath: '/deployments'
+    });
+
     this.appId = shortid.generate();
     this.versionId = shortid.generate();
 
-    this.server.get('/deployments/:appId/:versionId/*', staticAsset(this.server.settings));
+    this.server.get(this.server.settings.deployedAssetsPath + '/:appId/:versionId/*', staticAsset(this.server.settings));
 
     this.extendedRequest = {
       virtualEnv: 'production',
@@ -60,8 +65,9 @@ describe('staticAsset', function() {
 
   it('serves static asset with max-age', function(done) {
     var filePath = 'data/ok.text';
+    var url = this.server.settings.deployedAssetsPath + '/' + this.appId + '/' + this.versionId + '/' + filePath;
     supertest(this.server)
-      .get('/deployments/' + this.appId + '/' + this.versionId + '/' + filePath)
+      .get(url)
       .expect(200)
       .expect('Content-Type', 'text/plain')
       .expect('Cache-Control', 'max-age=' + self.server.settings.staticAssetMaxAge)
@@ -106,7 +112,7 @@ describe('staticAsset', function() {
     async.series([
       function(cb) {
         supertest(self.server)
-          .get('/deployments/' + self.appId + '/' + self.versionId + '/missing.txt')
+          .get(self.server.deployedAssetsPath + '/' + self.appId + '/' + self.versionId + '/missing.txt')
           .expect(404)
           .end(cb);
       },
@@ -232,6 +238,20 @@ describe('staticAsset', function() {
       .expect(function(res) {
         assert.isFalse(self.storage.readFileStream.called);
         assert.equal(res.headers.location, urljoin(self.server.settings.deployedAssetsPath, self.appId, self.versionId, filePath));
+      })
+      .end(done);
+  });
+
+  it('redirects images to CDN', function(done) {
+    this.server.settings.deployedAssetsPath = 'cdnhost.net';
+    var filePath = '/images/photo.png';
+    supertest(this.server)
+      .get(filePath)
+      .expect(302)
+      .expect(function(res) {
+        assert.isFalse(self.storage.readFileStream.called);
+        assert.equal(res.headers.location, urljoin('http://', self.server.settings.deployedAssetsPath,
+          self.appId, self.versionId, filePath));
       })
       .end(done);
   });
