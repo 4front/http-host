@@ -18,10 +18,15 @@ describe('staticAsset', function() {
     this.server = express();
     this.maxAge = 100000;
     this.responseText = 'OK';
+    this.metadata = {};
 
     this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        return streamTestUtils.buffer(self.responseText);
+        var stream = streamTestUtils.buffer(self.responseText);
+        stream.on('readable', function() {
+          this.emit('metadata', self.metadata);
+        });
+        return stream;
       })
     };
 
@@ -65,6 +70,31 @@ describe('staticAsset', function() {
         assert.isFalse(res.headers.etag || false);
         assert.isTrue(self.storage.readFileStream.calledWith(urljoin(self.appId, self.versionId, filePath)));
       })
+      .end(done);
+  });
+
+  it('returns Content-Encoding header for gzipped assets', function(done) {
+    this.storage.readFileStream = function() {
+      return streamTestUtils.emitter('metadata', {contentEncoding: 'gzip'});
+    };
+
+    supertest(this.server)
+      .get('/gzipped.txt')
+      .expect(200)
+      .expect('Content-Type', 'text/plain')
+      .expect('Content-Encoding', 'gzip')
+      .end(done);
+  });
+
+  it('returns Content-Type from storage if it exists', function(done) {
+    this.storage.readFileStream = function() {
+      return streamTestUtils.emitter('metadata', {contentType: 'custom-type'});
+    };
+
+    supertest(this.server)
+      .get('/customtype.txt')
+      .expect(200)
+      .expect('Content-Type', 'custom-type')
       .end(done);
   });
 
