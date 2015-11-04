@@ -20,7 +20,7 @@ describe('staticAsset', function() {
     this.responseText = 'OK';
 
     this.storage = this.server.settings.storage = {
-      createReadStream: sinon.spy(function() {
+      readFileStream: sinon.spy(function() {
         return streamTestUtils.buffer(self.responseText);
       })
     };
@@ -63,13 +63,13 @@ describe('staticAsset', function() {
       .expect(function(res) {
         assert.equal(res.text, self.responseText);
         assert.isFalse(res.headers.etag || false);
-        assert.isTrue(self.storage.createReadStream.calledWith(urljoin(self.appId, self.versionId, filePath)));
+        assert.isTrue(self.storage.readFileStream.calledWith(urljoin(self.appId, self.versionId, filePath)));
       })
       .end(done);
   });
 
   it('returns 404 for files missing in storage', function(done) {
-    this.storage.createReadStream = function() {
+    this.storage.readFileStream = function() {
       return streamTestUtils.emitter('missing');
     };
 
@@ -90,7 +90,7 @@ describe('staticAsset', function() {
   });
 
   it('returns 500 when storage throws error', function(done) {
-    this.storage.createReadStream = function() {
+    this.storage.readFileStream = function() {
       return streamTestUtils.emitter('readError', new Error('some error'));
     };
 
@@ -125,23 +125,23 @@ describe('staticAsset', function() {
           .expect(self.responseText)
           .expect(function(res) {
             initialETag = res.headers.etag;
-            assert.isTrue(self.storage.createReadStream.calledWith(urljoin(self.appId, self.versionId, filePath)));
+            assert.isTrue(self.storage.readFileStream.calledWith(urljoin(self.appId, self.versionId, filePath)));
           })
           .end(cb);
       },
       function(cb) {
-        self.storage.createReadStream.reset();
+        self.storage.readFileStream.reset();
         supertest(self.server)
           .get('/' + filePath)
           .set('If-None-Match', initialETag)
           .expect(304)
           .expect(function(res) {
-            assert.isFalse(self.storage.createReadStream.called);
+            assert.isFalse(self.storage.readFileStream.called);
           })
           .end(cb);
       },
       function(cb) {
-        self.storage.createReadStream.reset();
+        self.storage.readFileStream.reset();
         var newVersionId = shortid.generate();
         self.extendedRequest.virtualAppVersion.versionId = newVersionId;
         supertest(self.server)
@@ -153,7 +153,7 @@ describe('staticAsset', function() {
           .expect('Cache-Control', 'no-cache')
           .expect(self.responseText)
           .expect(function(res) {
-            assert.isTrue(self.storage.createReadStream.calledWith(urljoin(self.appId, newVersionId, filePath)));
+            assert.isTrue(self.storage.readFileStream.calledWith(urljoin(self.appId, newVersionId, filePath)));
           })
           .end(cb);
       }
@@ -165,7 +165,7 @@ describe('staticAsset', function() {
       .get('/blog')
       .expect(404)
       .expect(function(res) {
-        assert.isFalse(self.storage.createReadStream.called);
+        assert.isFalse(self.storage.readFileStream.called);
       })
       .end(done);
   });
@@ -175,7 +175,7 @@ describe('staticAsset', function() {
       .get('/blog.html')
       .expect(404)
       .expect(function(res) {
-        assert.isFalse(self.storage.createReadStream.called);
+        assert.isFalse(self.storage.readFileStream.called);
       })
       .end(done);
   });
@@ -188,7 +188,7 @@ describe('staticAsset', function() {
       .get('/images/photo.png')
       .expect(302)
       .expect(function(res) {
-        assert.isFalse(self.storage.createReadStream.called);
+        assert.isFalse(self.storage.readFileStream.called);
         assert.equal(res.headers.location, 'http://localhost:9999/images/photo.png');
       })
       .end(done);
@@ -200,7 +200,7 @@ describe('staticAsset', function() {
       .get(filePath)
       .expect(302)
       .expect(function(res) {
-        assert.isFalse(self.storage.createReadStream.called);
+        assert.isFalse(self.storage.readFileStream.called);
         assert.equal(res.headers.location, urljoin(self.server.settings.deployedAssetsPath, self.appId, self.versionId, filePath));
       })
       .end(done);
