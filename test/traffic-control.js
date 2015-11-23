@@ -2,7 +2,6 @@
 var assert = require('assert');
 var sinon = require('sinon');
 var trafficControl = require('../lib/middleware/traffic-control');
-var querystring = require('querystring');
 var express = require('express');
 var request = require('supertest');
 var _ = require('lodash');
@@ -10,8 +9,6 @@ var testUtil = require('./test-util');
 var debug = require('debug');
 
 describe('trafficControl()', function() {
-  var server;
-
   beforeEach(function() {
     var self = this;
 
@@ -58,8 +55,6 @@ describe('trafficControl()', function() {
         .set('Host', 'testapp.platform.com')
         .expect(302)
         .expect(function(res) {
-          var setCookieHeader = res.headers['set-cookie'];
-
           var cookieValue = encodeURIComponent(JSON.stringify({
             versionId: 'abc',
             method: 'urlOverride'
@@ -102,28 +97,29 @@ describe('trafficControl()', function() {
       request(this.server)
         .get('/')
         .expect(404)
-        .expect('Error-Code', "versionNotFound")
+        .expect('Error-Code', 'invalidVersionId')
         .end(done);
     });
   });
 
-  it("returns 404 when no traffic rules configured for environment", function(done) {
+  it('returns 404 when no traffic rules configured for environment', function(done) {
     this.extendedRequest.virtualApp.trafficRules.production = [];
 
     request(this.server)
       .get('/')
       .expect(404)
-      .expect('Error-Code', "noLiveVersions")
+      .expect('Error-Code', 'noDeployedVersion')
       .end(done);
   });
 
   describe('version in cookie does not exist', function() {
     it('falls back to traffic control rules', function(done) {
       this.server.settings.database.getVersion = function(appId, versionId, callback) {
-        if (versionId === '2')
+        if (versionId === '2') {
           callback(null, null);
-        else
+        } else {
           callback(null, {versionId: versionId});
+        }
       };
 
       request(this.server)
