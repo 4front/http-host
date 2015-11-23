@@ -3,6 +3,7 @@
 var express = require('express');
 var supertest = require('supertest');
 var _ = require('lodash');
+var async = require('async');
 var streamTestUtils = require('./stream-test-utils');
 var virtualRouter = require('../lib/middleware/virtual-router');
 var assert = require('assert');
@@ -11,9 +12,10 @@ var path = require('path');
 // TODO: Need to support 4 arrity middleware
 describe('virtualRouter', function() {
   var virtualRouterOptions;
+  var self;
 
   beforeEach(function() {
-    var self = this;
+    self = this;
     this.server = express();
 
     this.virtualApp = {
@@ -21,14 +23,16 @@ describe('virtualRouter', function() {
     };
 
     this.env = {};
-
+    this.virtualEnv = 'production';
     this.manifest = {};
+
     this.server.use(function(req, res, next) {
       req.ext = {
         virtualApp: self.virtualApp,
         virtualAppVersion: {
           manifest: self.manifest
         },
+        virtualEnv: self.virtualEnv,
         env: self.env,
         plugins: []
       };
@@ -285,5 +289,44 @@ describe('virtualRouter', function() {
       .expect(404)
       .expect('Error-Handler', 'err-handler')
       .end(done);
+  });
+
+  it('skips plugins based on the virtualEnv', function(done) {
+    this.manifest.router = [
+      {
+        environments: ['production'],
+        path: '/',
+        module: 'sendtext',
+        options: {
+          text: 'production'
+        }
+      },
+      {
+        environments: ['test'],
+        path: '/',
+        module: 'sendtext',
+        options: {
+          text: 'test'
+        }
+      }
+    ];
+
+    async.series([
+      function(cb) {
+        supertest(self.server)
+          .get('/')
+          .expect(200)
+          .expect('production')
+          .end(cb);
+      },
+      function(cb) {
+        self.virtualEnv = 'test';
+        supertest(self.server)
+          .get('/')
+          .expect(200)
+          .expect('test')
+          .end(cb);
+      }
+    ], done);
   });
 });
