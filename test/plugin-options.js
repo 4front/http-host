@@ -21,10 +21,10 @@ describe('pluginOptions', function() {
   describe('environment variable substitution', function() {
     it('env variable options', function() {
       var options = {
-        option1: "env:KEY1",
+        option1: 'env:KEY1',
         another: 'foo',
         more: {
-          option2: "env:KEY2"
+          option2: 'env:KEY2'
         }
       };
 
@@ -46,13 +46,13 @@ describe('pluginOptions', function() {
 
     it('throws error for missing environment variable', function() {
       var options = {
-        option1: "env:MISSING",
+        option1: 'env:MISSING',
       };
 
       assert.throws(function() {
         pluginOptions(options, {
           env: {
-            KEY1: {value:'key1'}
+            KEY1: {value: 'key1'}
           }
         });
       }, function(err) {
@@ -64,23 +64,23 @@ describe('pluginOptions', function() {
   describe('regex expansion', function() {
     it('turns option into regex', function() {
       var options = {
-        option1: "regex:[a-z]+",
+        option1: 'regex:[a-z]+',
       };
 
       var expandedOptions = pluginOptions(options, {});
       assert.ok(typeof expandedOptions.option1, RegExp);
-      assert.equal(expandedOptions.option1.toString(), "/[a-z]+/")
+      assert.equal(expandedOptions.option1.toString(), '/[a-z]+/');
     });
 
     it('throws error for invalid regex', function() {
       var options = {
-        option1: "regex:/\\",
+        option1: 'regex:/\\',
       };
 
       assert.throws(function() {
         pluginOptions(options, {
           env: {
-            KEY1: {value:'key1'}
+            KEY1: {value: 'key1'}
           }
         });
       }, function(err) {
@@ -116,11 +116,11 @@ describe('pluginOptions', function() {
     it('decrypts encrypted user options', function() {
       var options = {
         headers: {
-          Authentication: "user:basicAuthToken"
+          Authentication: 'user:basicAuthToken'
         }
       };
 
-      var basicAuth = "Basic " + new Buffer("joe:password").toString("base64");
+      var basicAuth = 'Basic ' + new Buffer('joe:password').toString('base64');
       var expandedOptions = pluginOptions(options, {
         user: {
           basicAuthToken: { '__encrypted': crypto.encrypt(basicAuth) }
@@ -142,7 +142,7 @@ describe('pluginOptions', function() {
       assert.throws(function() {
         pluginOptions(options, {});
       }, function(err) {
-        return err.code === 'missingSessionUser'
+        return err.code === 'missingSessionUser';
       });
     });
 
@@ -152,9 +152,9 @@ describe('pluginOptions', function() {
       };
 
       assert.throws(function() {
-        pluginOptions(options, {user:{}});
+        pluginOptions(options, {user: {}});
       }, function(err) {
-        return err.code === 'invalidUserProperty'
+        return err.code === 'invalidUserProperty';
       });
     });
   });

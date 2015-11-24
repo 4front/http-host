@@ -1,3 +1,4 @@
+/* eslint no-console: 0 */
 
 var assert = require('assert');
 var memoryCache = require('memory-cache-stream');
@@ -6,24 +7,20 @@ var querystring = require('querystring');
 var loremIpsum = require('lorem-ipsum');
 var express = require('express');
 var supertest = require('supertest');
-var _ = require('lodash');
 var async = require('async');
 var shortid = require('shortid');
-var crypto = require('crypto');
 var cookieParser = require('cookie-parser');
 var parseUrl = require('url').parse;
 var formatUrl = require('url').format;
-var querystring = require('querystring');
 var helper = require('../lib/helper');
 var debug = require('debug')('4front-apphost:dev-sandbox-page');
 
 require('simple-errors');
 
-describe('devSandbox()', function(){
-  var hostname = 'appname.platformhost.com';
+describe('devSandbox()', function() {
   var self;
 
-  beforeEach(function(){
+  beforeEach(function() {
     self = this;
 
     this.user = {
@@ -71,15 +68,16 @@ describe('devSandbox()', function(){
 
     this.server.use(function(err, req, res, next) {
       res.statusCode = err.status || 500;
-      if (res.statusCode === 500)
+      if (res.statusCode === 500) {
         console.log(err.stack);
+      }
 
       res.end(err.message);
     });
   });
 
   it('loads page', function(done) {
-    var html = "<html>somepage</html>";
+    var html = '<html>somepage</html>';
     this.extendedRequest.webPagePath = 'somepage.html';
 
     async.series([
@@ -116,7 +114,7 @@ describe('devSandbox()', function(){
           .expect(200)
           .expect(function(res) {
             assert.equal(res.text, html);
-            assert.equal(res.etag)
+            assert.equal(res.etag);
           })
           .end(cb);
       }
@@ -166,13 +164,13 @@ describe('devSandbox()', function(){
   });
 
   it('passes custom 404 page in redirect querystring', function(done) {
-    var custom404Page = "errors/404.html";
+    var custom404Page = 'errors/404.html';
 
     this.extendedRequest.virtualAppVersion.manifest.router.push({
-      module: "custom-errors",
+      module: 'custom-errors',
       options: {
         errors: {
-          "404": custom404Page
+          '404': custom404Page
         }
       }
     });

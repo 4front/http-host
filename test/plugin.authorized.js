@@ -37,15 +37,15 @@ describe('authorized', function() {
     authorizedOptions = {
       routes: [
         {
-          path: "/protected/admin/*",
+          path: '/protected/admin/*',
           allowed: {
-            roles: ["admin"]
+            roles: ['admin']
           }
         },
         {
-          path: "/protected/*",
+          path: '/protected/*',
           allowed: {
-            groups: ["Full-Time Employees"]
+            groups: ['Full-Time Employees']
           }
         }
       ]
@@ -71,18 +71,18 @@ describe('authorized', function() {
       .get('/protected/secret')
       .expect(302)
       .expect('location', '/login')
-      .expect('set-cookie', "returnUrl=" + encodeURIComponent('/protected/secret') + "; Path=/; HttpOnly")
+      .expect('set-cookie', 'returnUrl=' + encodeURIComponent('/protected/secret') + '; Path=/; HttpOnly')
       .end(done);
   });
 
-  describe("single page app", function() {
+  describe('single page app', function() {
     beforeEach(function() {
       this.sessionStub.user = null;
       authorizedOptions.loginPage = 'login.html';
 
       // Require auth on the app root
       authorizedOptions.routes.push({
-        path: "/"
+        path: '/'
       });
     });
 
@@ -101,7 +101,7 @@ describe('authorized', function() {
         .get('/protected/foo')
         .expect(302)
         .expect('location', '/')
-        .expect('set-cookie', "returnUrl=" + encodeURIComponent('/protected/foo') + "; Path=/; HttpOnly")
+        .expect('set-cookie', 'returnUrl=' + encodeURIComponent('/protected/foo') + '; Path=/; HttpOnly')
         .end(done);
     });
   });
@@ -112,7 +112,7 @@ describe('authorized', function() {
     supertest(this.server)
       .get('/protected/foo')
       .expect(401)
-      .expect('error-code', "noLoggedInUser")
+      .expect('error-code', 'noLoggedInUser')
       .end(done);
   });
 
@@ -147,7 +147,7 @@ describe('authorized', function() {
       supertest(this.server)
         .get('/protected/wherever')
         .expect(403)
-        .expect('error-code', "authFailedNotMemberOfAllowedGroup")
+        .expect('error-code', 'authFailedNotMemberOfAllowedGroup')
         .expect(function(res) {
           assert.isTrue(self.sessionStub.destroy.called);
         })
@@ -167,17 +167,17 @@ describe('authorized', function() {
     });
 
     it('returns 403 if user has groups but not the right ones', function(done) {
-      user.groups = ["Testers"];
+      user.groups = ['Testers'];
 
       supertest(this.server)
         .get('/protected/')
         .expect(403)
-        .expect('error-code', "authFailedNotMemberOfAllowedGroup")
+        .expect('error-code', 'authFailedNotMemberOfAllowedGroup')
         .end(done);
     });
 
     it('user authorized if they belong to allowed group', function(done) {
-      user.groups = ["Full-Time Employees"];
+      user.groups = ['Full-Time Employees'];
 
       supertest(this.server)
         .get('/protected/')
@@ -194,22 +194,22 @@ describe('authorized', function() {
       supertest(this.server)
         .get('/protected/admin/users')
         .expect(403)
-        .expect('error-code', "authFailedDoesNotHaveRequiredRole")
+        .expect('error-code', 'authFailedDoesNotHaveRequiredRole')
         .end(done);
     });
 
     it('returns 403 if user has roles but not the right ones', function(done) {
-      user.roles = ["reader"];
+      user.roles = ['reader'];
 
       supertest(this.server)
         .get('/protected/admin/users')
         .expect(403)
-        .expect('error-code', "authFailedDoesNotHaveRequiredRole")
+        .expect('error-code', 'authFailedDoesNotHaveRequiredRole')
         .end(done);
     });
 
     it('user authorized if they have allowed role', function(done) {
-      user.roles = ["admin"];
+      user.roles = ['admin'];
 
       supertest(this.server)
         .get('/protected/admin/users')

@@ -4,6 +4,7 @@
   "description": "Virtual app host container for multi-tenant container.",
   "main": "index.js",
   "scripts": {
+    "lint": "node_modules/.bin/eslint --config .eslintrc .; exit 0",
     "test": "mocha --reporter spec --bail --check-leaks test/",
     "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks test/",
     "test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --reporter spec --check-leaks test/"
@@ -17,6 +18,10 @@
     "middleware",
     "sandbox",
     "dev"
+  ],
+  "files": [
+    "lib",
+    "index.js"
   ],
   "author": "David Von Lehman",
   "license": "Apache-2.0",

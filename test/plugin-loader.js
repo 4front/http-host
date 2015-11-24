@@ -1,24 +1,19 @@
 var assert = require('assert');
-var sinon = require('sinon');
 var path = require('path');
 var _ = require('lodash');
 var debug = require('debug');
 
 require('dash-assert');
 
-describe('pluginLoader()', function(){
-  var self;
-
-  beforeEach(function(){
-    self = this;
-
+describe('pluginLoader()', function() {
+  beforeEach(function() {
     this.pluginLoader = require('../lib/plugin-loader')({
-      builtInPluginsDir: [path.join(__dirname, "./fixtures/plugins")]
+      builtInPluginsDir: [path.join(__dirname, './fixtures/plugins')]
     });
   });
 
   it('load built-in plugin', function(done) {
-    this.pluginLoader("sendtext", {}, function(err, plugin) {
+    this.pluginLoader('sendtext', {}, function(err, plugin) {
       if (err) return done(err);
 
       assert.ok(_.isFunction(plugin));
@@ -26,23 +21,23 @@ describe('pluginLoader()', function(){
     });
   });
 
-  it("returns error loading missing plugin", function(done) {
-    this.pluginLoader("missing-plugin", {}, function(err, plugin) {
+  it('returns error loading missing plugin', function(done) {
+    this.pluginLoader('missing-plugin', {}, function(err) {
       assert.isDefined(err);
-      assert.equal(err.code, "pluginLoadError");
+      assert.equal(err.code, 'pluginLoadError');
 
       done();
     });
   });
 
-  it("loads installed plugin", function(done) {
+  it('loads installed plugin', function(done) {
     var options = {
       resave: true,
       saveUninitialized: false,
       secret: 'secret'
     };
 
-    this.pluginLoader("express-session", options, function(err, plugin) {
+    this.pluginLoader('express-session', options, function(err, plugin) {
       if (err) return done(err);
       assert.ok(_.isFunction(plugin));
       done();
@@ -50,36 +45,36 @@ describe('pluginLoader()', function(){
   });
 
   it('returns error for plugin that does not export a function', function(done) {
-    this.pluginLoader("invalid-export", {}, function(err, plugin) {
+    this.pluginLoader('invalid-export', {}, function(err) {
       assert.isDefined(err);
-      assert.equal(err.code, "pluginInvalidExport");
+      assert.equal(err.code, 'pluginInvalidExport');
 
       done();
     });
   });
 
   it('returns error for plugin that does not return a function with 3 args', function(done) {
-    this.pluginLoader("invalid-signature", {}, function(err, plugin) {
+    this.pluginLoader('invalid-signature', {}, function(err) {
       assert.isDefined(err);
-      assert.equal(err.code, "pluginFunctionSignature");
+      assert.equal(err.code, 'pluginFunctionSignature');
 
       done();
     });
   });
 
   it('returns error for plugin that does returns func with wrong arg names', function(done) {
-    this.pluginLoader("wrong-arg-names", {}, function(err, plugin) {
+    this.pluginLoader('wrong-arg-names', {}, function(err) {
       assert.isDefined(err);
-      assert.equal(err.code, "pluginFunctionSignature");
+      assert.equal(err.code, 'pluginFunctionSignature');
 
       done();
     });
   });
 
   it('returns error for plugin that throws error during creation', function(done) {
-    this.pluginLoader("throws-error", {}, function(err, plugin) {
+    this.pluginLoader('throws-error', {}, function(err) {
       assert.isDefined(err);
-      assert.equal(err.code, "pluginCreateError");
+      assert.equal(err.code, 'pluginCreateError');
 
       done();
     });

@@ -4,11 +4,10 @@ var helper = require('../lib/helper');
 
 describe('helper', function() {
   describe('ensureRequiredOptions()', function() {
-    it('throws error for missing option', function() {      
+    it('throws error for missing option', function() {
       try {
         helper.ensureRequiredOptions({option1: 5}, 'option1', 'option2');
-      }
-      catch (err) {
+      } catch (err) {
         assert.equal(err.message, 'Required option option2 missing');
         return;
       }
@@ -19,8 +18,7 @@ describe('helper', function() {
     it("it throws error when '*Fn' option not a function", function() {
       try {
         helper.ensureRequiredOptions({optionFn: 5}, 'optionFn');
-      }
-      catch (err) {
+      } catch (err) {
         assert.equal(err.message, 'Option optionFn expected to be a function');
         return;
       }
