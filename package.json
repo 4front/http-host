@@ -1,7 +1,7 @@
 {
   "name": "4front-apphost",
   "version": "1.0.17",
-  "description": "Virtual app host container for multi-tenant container.",
+  "description": "Core 4front http hosting functionality",
   "main": "index.js",
   "scripts": {
     "lint": "node_modules/.bin/eslint --config .eslintrc .; exit 0",
@@ -16,8 +16,8 @@
   "keywords": [
     "4front",
     "middleware",
-    "sandbox",
-    "dev"
+    "http",
+    "hosting"
   ],
   "files": [
     "lib",
@@ -69,6 +69,6 @@
     "supertest": "^0.15.0"
   },
   "engines": {
-    "node": ">= 0.10.0"
+    "node": ">= 0.12.0"
   }
 }

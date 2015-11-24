@@ -56,9 +56,10 @@ describe('session()', function() {
         assert.isMatch(res.body.session.cookie, {
           path: '/',
           httpOnly: true,
-          secure: true,
-          originalMaxAge: 60 * 60000
+          secure: true
         });
+
+        assert.equal(res.body.session.cookie.originalMaxAge, 60 * 60000);
       })
       .end(done);
   });

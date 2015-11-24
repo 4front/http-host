@@ -115,13 +115,14 @@ describe('staticAsset', function() {
           .get(self.server.deployedAssetsPath + '/' + self.appId + '/' + self.versionId + '/missing.txt')
           .expect(404)
           .end(cb);
-      },
-      function(cb) {
-        supertest(self.server)
-          .get('/missing.txt')
-          .expect(404)
-          .end(cb);
       }
+      // ,
+      // function(cb) {
+      //   supertest(self.server)
+      //     .get('/missing.txt')
+      //     .expect(404)
+      //     .end(cb);
+      // }
     ], done);
   });
 
