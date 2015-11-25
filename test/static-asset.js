@@ -112,14 +112,14 @@ describe('staticAsset', function() {
     });
 
     it('for static asset', function(done) {
-      supertest(self.server)
-        .get(self.server.deployedAssetsPath + '/' + self.appId + '/' + self.versionId + '/missing.txt')
+      supertest(this.server)
+        .get('/deployments/' + this.appId + '/' + this.versionId + '/missing.txt')
         .expect(404)
         .end(done);
     });
 
     it('for root file', function(done) {
-      supertest(self.server)
+      supertest(this.server)
         .get('/missing.txt')
         .expect(404)
         .end(done);
