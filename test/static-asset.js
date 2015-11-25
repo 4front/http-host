@@ -104,26 +104,26 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('returns 404 for files missing in storage', function(done) {
-    this.storage.readFileStream = function() {
-      return streamTestUtils.emitter('missing');
-    };
+  describe('returns 404 for missing files', function() {
+    beforeEach(function() {
+      this.storage.readFileStream = function() {
+        return streamTestUtils.emitter('missing');
+      };
+    });
 
-    async.series([
-      function(cb) {
-        supertest(self.server)
-          .get(self.server.deployedAssetsPath + '/' + self.appId + '/' + self.versionId + '/missing.txt')
-          .expect(404)
-          .end(cb);
-      }
-      // ,
-      // function(cb) {
-      //   supertest(self.server)
-      //     .get('/missing.txt')
-      //     .expect(404)
-      //     .end(cb);
-      // }
-    ], done);
+    it('for static asset', function(done) {
+      supertest(self.server)
+        .get(self.server.deployedAssetsPath + '/' + self.appId + '/' + self.versionId + '/missing.txt')
+        .expect(404)
+        .end(done);
+    });
+
+    it('for root file', function(done) {
+      supertest(self.server)
+        .get('/missing.txt')
+        .expect(404)
+        .end(done);
+    });
   });
 
   it('returns 500 when storage throws error', function(done) {

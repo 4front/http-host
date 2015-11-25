@@ -59,7 +59,8 @@ describe('session()', function() {
           secure: true
         });
 
-        assert.equal(res.body.session.cookie.originalMaxAge, 60 * 60000);
+        // These two values should be very close to each other.
+        assert.isTrue((60 * 60000) - res.body.session.cookie.originalMaxAge < 100);
       })
       .end(done);
   });
