@@ -39,7 +39,7 @@ describe('trafficControl()', function() {
 
     this.server.use(require('cookie-parser')());
 
-    this.server.use(trafficControl());
+    this.server.use(trafficControl(this.server.settings));
 
     this.server.use(function(req, res, next) {
       res.json(_.pick(req.ext, 'virtualAppVersion'));
