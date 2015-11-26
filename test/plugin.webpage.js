@@ -300,9 +300,20 @@ describe('webPage', function() {
         var customHeadIndex = res.text.indexOf(customScript);
         var clientConfigIndex = res.text.indexOf('__4front__=');
 
-        assert.ok(customHeadIndex !== -1);
-        assert.ok(clientConfigIndex !== -1);
+        assert.notEqual(customHeadIndex, -1);
+        assert.notEqual(clientConfigIndex, -1);
         assert.ok(clientConfigIndex < customHeadIndex);
+      })
+      .end(done);
+  });
+
+  it('supports a custom global config variable', function(done) {
+    this.server.settings.clientConfigVar = '_global';
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect(function(res) {
+        assert.notEqual('_global=__4front__=', -1);
       })
       .end(done);
   });
