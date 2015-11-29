@@ -28,7 +28,7 @@ describe('virtualAppLoader()', function() {
     this.env = {};
 
     this.server.settings.virtualHost = 'testapps.com';
-    this.server.settings.virtualAppRegistry = {
+    this.appRegistry = this.server.settings.virtualAppRegistry = {
       getByName: sinon.spy(function(name, callback) {
         callback(null, {
           appId: self.appId,
@@ -62,7 +62,7 @@ describe('virtualAppLoader()', function() {
         .set('Host', 'appname--test.testapps.com')
         .expect(200)
         .expect(function(res) {
-          assert.isTrue(self.server.settings.virtualAppRegistry.getByName.calledWith('appname'));
+          assert.isTrue(self.appRegistry.getByName.calledWith('appname'));
           assert.equal(res.body.virtualEnv, 'test');
           assert.equal(res.body.virtualHost, 'appname.testapps.com');
         })
@@ -105,7 +105,7 @@ describe('virtualAppLoader()', function() {
     it('should call findApp passing in a domain', function(done) {
       var customDomain = {domain: 'www.custom-domain.com'};
 
-      this.server.settings.virtualAppRegistry.getByDomain = sinon.spy(function(domain, callback) {
+      this.appRegistry.getByDomain = sinon.spy(function(domain, callback) {
         callback(null, {domain: customDomain});
       });
 
@@ -114,7 +114,7 @@ describe('virtualAppLoader()', function() {
         .set('Host', customDomain.domain)
         .expect(200)
         .expect(function(res) {
-          assert.isTrue(self.server.settings.virtualAppRegistry.getByDomain.calledWith(customDomain.domain));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith(customDomain.domain));
           assert.deepEqual(res.body.virtualApp.domain, customDomain);
         })
         .end(done);
@@ -124,7 +124,7 @@ describe('virtualAppLoader()', function() {
       var customDomain = {domain: 'custom-domain.com', action: 'redirect'};
       var appUrl = 'http://www.custom-domain.com';
 
-      this.server.settings.virtualAppRegistry.getByDomain = sinon.spy(function(domain, callback) {
+      this.appRegistry.getByDomain = sinon.spy(function(domain, callback) {
         callback(null, {domain: customDomain, url: appUrl});
       });
 
@@ -133,8 +133,25 @@ describe('virtualAppLoader()', function() {
         .set('Host', customDomain.domain)
         .expect(301)
         .expect(function(res) {
-          assert.isTrue(self.server.settings.virtualAppRegistry.getByDomain.calledWith(customDomain.domain));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith(customDomain.domain));
           assert.equal(res.headers.location, appUrl);
+        })
+        .end(done);
+    });
+
+    it('recognizes custom domain with env in host', function(done) {
+      var host = 'www--test1.customdomain.com';
+      this.appRegistry.getByDomain = sinon.spy(function(domain, callback) {
+        callback(null, {domain: domain});
+      });
+
+      request(this.server)
+        .get('/')
+        .set('Host', host)
+        .expect(200)
+        .expect(function(res) {
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('www.customdomain.com'));
+          assert.equal(res.body.virtualEnv, 'test1');
         })
         .end(done);
     });
@@ -142,7 +159,7 @@ describe('virtualAppLoader()', function() {
 
   describe('app with requireSsl set to true', function() {
     it('should redirect to https', function(done) {
-      this.server.settings.virtualAppRegistry.getByName = function(name, callback) {
+      this.appRegistry.getByName = function(name, callback) {
         callback(null, {requireSsl: true});
       };
 
