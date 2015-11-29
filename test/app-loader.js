@@ -172,6 +172,44 @@ describe('virtualAppLoader()', function() {
         })
         .end(done);
     });
+
+    it('should redirect custom domains with certificates', function(done) {
+      var customDomain = {
+        domain: 'www.domain.net',
+        action: 'resolve',
+        certificate: 'asdfasdf'
+      };
+
+      this.appRegistry.getByDomain = function(name, callback) {
+        callback(null, {requireSsl: true, domains: [customDomain]});
+      };
+
+      request(this.server)
+        .get('/path')
+        .set('Host', customDomain.domain)
+        .expect(302)
+        .expect(function(res) {
+          assert.equal(res.headers.location, 'https://' + customDomain.domain + '/path');
+        })
+        .end(done);
+    });
+
+    it('does not redirect custom domains without a cert', function(done) {
+      var customDomain = {
+        domain: 'www.domain.net',
+        action: 'resolve'
+      };
+
+      this.appRegistry.getByDomain = function(name, callback) {
+        callback(null, {requireSsl: true, domain: customDomain});
+      };
+
+      request(this.server)
+        .get('/path')
+        .set('Host', customDomain.domain)
+        .expect(200)
+        .end(done);
+    });
   });
 
   describe('environment variables', function() {
