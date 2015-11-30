@@ -3,6 +3,7 @@ var sinon = require('sinon');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
+var zlib = require('zlib');
 var streamTestUtils = require('./stream-test-utils');
 var metapages = require('../lib/middleware/metapages');
 
@@ -46,22 +47,46 @@ describe('metapages', function() {
     });
   });
 
-  it('returns sitemap.xml', function(done) {
-    this.fileContent = '<sitemap></sitemap>';
+  it('returns gzipped sitemap.xml', function(done) {
+    var metadata = {
+      contentEncoding: 'gzip',
+      contentType: 'application/xml'
+    };
+
+    var contents = '<sitemap></sitemap>';
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(zlib.gzipSync(contents), {
+        metadata: metadata
+      });
+    });
+
     supertest(this.server)
       .get('/sitemap.xml')
-      .expect('Content-Type', 'application/xml')
+      .expect('Content-Type', metadata.contentType)
+      .expect('Content-Encoding', metadata.contentEncoding)
       .expect('etag', this.versionId)
       .expect(200)
       .expect(function(res) {
         assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/sitemap.xml'));
-        assert.equal(res.text, self.fileContent);
+        assert.equal(res.text, contents);
       })
       .end(done);
   });
 
   it('returns robots.txt', function(done) {
-    this.fileContent = 'robots';
+    var contents = 'robots';
+
+    var metadata = {
+      contentType: 'text/plain'
+    };
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(contents, {
+        metadata: metadata
+      });
+    });
+
     supertest(this.server)
       .get('/robots.txt')
       .expect('Content-Type', /^text\/plain/)
@@ -69,13 +94,24 @@ describe('metapages', function() {
       .expect(200)
       .expect(function(res) {
         assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/robots.txt'));
-        assert.equal(res.text, self.fileContent);
+        assert.equal(res.text, contents);
       })
       .end(done);
   });
 
   it('returns humans.txt', function(done) {
-    this.fileContent = 'humans';
+    var contents = 'humans';
+
+    var metadata = {
+      contentType: 'text/plain'
+    };
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(contents, {
+        metadata: metadata
+      });
+    });
+
     supertest(this.server)
       .get('/humans.txt')
       .expect('Content-Type', /^text\/plain/)
@@ -83,19 +119,22 @@ describe('metapages', function() {
       .expect(200)
       .expect(function(res) {
         assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/humans.txt'));
-        assert.equal(res.text, self.fileContent);
+        assert.equal(res.text, contents);
       })
       .end(done);
   });
 
   it('skips middleware when file not found', function(done) {
-    this.server.settings.storage.readFileStream = function() {
+    this.storage.readFileStream = sinon.spy(function() {
       return streamTestUtils.emitter('missing');
-    };
+    });
 
     supertest(this.server)
       .get('/sitemap.xml')
       .expect(404)
+      .expect(function(res) {
+        assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/sitemap.xml'));
+      })
       .end(done);
   });
 
@@ -104,6 +143,16 @@ describe('metapages', function() {
       .get('/sitemap.xml')
       .set('if-none-match', this.versionId)
       .expect(304)
+      .end(done);
+  });
+
+  it('skips middleware when request is not for a recognized metafile', function(done) {
+    supertest(this.server)
+      .get('/index.html')
+      .expect(404)
+      .expect(function(res) {
+        assert.isFalse(self.storage.readFileStream.called);
+      })
       .end(done);
   });
 });

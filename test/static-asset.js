@@ -23,10 +23,10 @@ describe('staticAsset', function() {
 
     this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        var stream = streamTestUtils.buffer(self.responseText);
-        stream.on('readable', function() {
-          this.emit('metadata', self.metadata);
+        var stream = streamTestUtils.buffer(self.responseText, {
+          metadata: self.metadata
         });
+
         return stream;
       })
     };

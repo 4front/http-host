@@ -1,4 +1,5 @@
 var stream = require('stream');
+var _ = require('lodash');
 // var sbuff = require('simple-bufferstream');
 
 module.exports = {
@@ -14,11 +15,18 @@ module.exports = {
   },
 
   // Provide a readable stream wrapper around a string
-  buffer: function(contents) {
+  buffer: function(contents, emitEvents) {
     var rs = stream.Readable();
     rs._read = function() {
       var self = this;
-      this.emit('readable');
+
+      if (_.isObject(emitEvents)) {
+        _.each(emitEvents, function(context, eventName) {
+          self.emit(eventName, context);
+        });
+      }
+      // this.emit('readable');
+
       process.nextTick(function() {
         self.emit('data', contents);
         self.emit('end');
