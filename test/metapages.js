@@ -65,6 +65,7 @@ describe('metapages', function() {
       .get('/sitemap.xml')
       .expect('Content-Type', metadata.contentType)
       .expect('Content-Encoding', metadata.contentEncoding)
+      .expect('Cache-Control', 'no-cache')
       .expect('etag', this.versionId)
       .expect(200)
       .expect(function(res) {

@@ -383,27 +383,6 @@ describe('webPage', function() {
       }
     ], done);
   });
-
-  // describe('non html pages', function() {
-  //   it('renders a sitemap.xml', function(done) {
-  //     this.pageContent = '<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>';
-  //     this.options.contentType = 'application/xml';
-  //
-  //     supertest(this.server)
-  //       .get('/sitemap.xml')
-  //       .expect(200)
-  //       .expect('Content-Type', 'application/xml')
-  //       .expect(function(res) {
-  //         assert.ok(self.server.settings.storage.readFileStream.calledWith(
-  //           urljoin(self.extendedRequest.virtualApp.appId,
-  //             self.extendedRequest.virtualAppVersion.versionId,
-  //             'sitemap.xml')));
-  //
-  //         assert.equal(res.text, self.pageContent);
-  //       })
-  //       .end(done);
-  //   });
-  // });
 });
 
 function parseClientConfig(text) {
