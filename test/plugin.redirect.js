@@ -98,4 +98,28 @@ describe('redirect plugin', function() {
       .expect(404)
       .end(done);
   });
+
+  describe('file extension match', function() {
+    before(function() {
+      redirectOptions = {
+        '/*\.php': '/(.*)'
+      };
+    });
+
+    it('at root', function(done) {
+      supertest(server)
+        .get('/about.php')
+        .expect(301)
+        .expect('Location', '/about')
+        .end(done);
+    });
+
+    it('with sub-folder', function(done) {
+      supertest(server)
+        .get('/blog/how-to-do-something.php')
+        .expect(301)
+        .expect('Location', '/blog/how-to-do-something')
+        .end(done);
+    });
+  });
 });

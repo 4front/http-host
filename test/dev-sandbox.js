@@ -17,7 +17,7 @@ require('dash-assert');
 require('simple-errors');
 
 describe('devSandbox()', function() {
-  var hostname = 'appname--dev.platformhost.com';
+  var hostname = 'appname--local.platformhost.com';
   var self;
 
   beforeEach(function() {
