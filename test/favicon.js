@@ -41,7 +41,7 @@ describe('favicon', function() {
   });
 
   it('renders the default favicon in dev mode', function(done) {
-    this.extendedRequest.virtualEnv = 'dev';
+    this.extendedRequest.virtualEnv = 'local';
 
     supertest(this.server)
       .get('/favicon.ico?default=1')

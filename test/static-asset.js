@@ -218,7 +218,7 @@ describe('staticAsset', function() {
   });
 
   it('redirects request to localhost for dev sandbox', function(done) {
-    this.extendedRequest.virtualEnv = 'dev';
+    this.extendedRequest.virtualEnv = 'local';
     this.extendedRequest.devOptions = { port: 9999 };
 
     supertest(this.server)

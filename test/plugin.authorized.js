@@ -154,8 +154,8 @@ describe('authorized', function() {
         .end(done);
     });
 
-    it('does not destroy session when virtualEnv is dev', function(done) {
-      self.extendedRequest.virtualEnv = 'dev';
+    it('does not destroy session when virtualEnv is local', function(done) {
+      self.extendedRequest.virtualEnv = 'local';
 
       supertest(this.server)
         .get('/protected/wherever')

@@ -31,7 +31,7 @@ describe('devSandbox()', function() {
 
     this.extendedRequest = {
       clientConfig: {},
-      virtualEnv: 'dev',
+      virtualEnv: 'local',
       webPagePath: 'index.html',
       developerId: this.userId,
       virtualApp: this.virtualApp
