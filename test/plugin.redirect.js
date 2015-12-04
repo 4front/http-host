@@ -102,7 +102,7 @@ describe('redirect plugin', function() {
   describe('file extension match', function() {
     before(function() {
       redirectOptions = {
-        '/*\.php': '/(.*)'
+        '/*.php': '/(.*)'
       };
     });
 
