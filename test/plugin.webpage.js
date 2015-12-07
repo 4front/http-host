@@ -246,6 +246,19 @@ describe('webPage', function() {
         })
         .end(done);
     });
+
+    it('rewrites asset url for relative paths', function(done) {
+      self.pageContent = '<html><img src="../img/photo.jpg"></html>';
+
+      supertest(this.server).get('/blog/summer-post')
+        .expect(200)
+        .expect(function(res) {
+          var expectedPath = urljoin(self.server.settings.deployedAssetsPath,
+            self.extendedRequest.virtualApp.appId, '123/blog/../img/photo.jpg');
+          assert.equal(res.text, '<html><img src="//' + expectedPath + '"/></html>');
+        })
+        .end(done);
+    });
   });
 
   describe('pushState', function() {
@@ -297,6 +310,7 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
+        debugger;
         var customHeadIndex = res.text.indexOf(customScript);
         var clientConfigIndex = res.text.indexOf('__4front__=');
 
@@ -313,7 +327,7 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        assert.notEqual('_global=__4front__=', -1);
+        assert.notEqual(res.text.indexOf('_global=__4front__='), -1);
       })
       .end(done);
   });
