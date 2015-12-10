@@ -197,6 +197,18 @@ describe('staticAsset', function() {
     ], done);
   });
 
+  it('sets content-type for any non html file type', function(done) {
+    this.metadata.contentType = 'application/vnd.android.package-archive';
+
+    supertest(this.server)
+      .get('/android.apk')
+      .expect(200)
+      .expect('Content-Type', this.metadata.contentType)
+      .expect('ETag', self.versionId)
+      .expect('Cache-Control', 'no-cache')
+      .end(done);
+  });
+
   it('skips middleware for non static asset requests', function(done) {
     supertest(this.server)
       .get('/blog')
