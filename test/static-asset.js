@@ -1,5 +1,6 @@
 var assert = require('assert');
 var sinon = require('sinon');
+var zlib = require('zlib');
 var _ = require('lodash');
 var urljoin = require('url-join');
 var async = require('async');
@@ -265,6 +266,33 @@ describe('staticAsset', function() {
         assert.isFalse(self.storage.readFileStream.called);
         assert.equal(res.headers.location, urljoin('http://', self.server.settings.deployedAssetsPath,
           self.appId, self.versionId, filePath));
+      })
+      .end(done);
+  });
+
+  it('returns gzipped sitemap.xml', function(done) {
+    var metadata = {
+      contentEncoding: 'gzip',
+      contentType: 'application/xml'
+    };
+
+    var contents = '<sitemap></sitemap>';
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(zlib.gzipSync(contents), {
+        metadata: metadata
+      });
+    });
+
+    supertest(this.server)
+      .get('/sitemap.xml')
+      .expect('Content-Type', metadata.contentType)
+      .expect('Content-Encoding', metadata.contentEncoding)
+      .expect('Cache-Control', 'no-cache')
+      .expect('etag', this.versionId)
+      .expect(200)
+      .expect(function(res) {
+        assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/sitemap.xml'));
+        assert.equal(res.text, contents);
       })
       .end(done);
   });
