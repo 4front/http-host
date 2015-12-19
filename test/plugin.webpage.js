@@ -310,7 +310,6 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        debugger;
         var customHeadIndex = res.text.indexOf(customScript);
         var clientConfigIndex = res.text.indexOf('__4front__=');
 
