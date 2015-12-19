@@ -59,6 +59,24 @@ describe('pluginOptions', function() {
         return err.code === 'invalidEnvironmentVariable';
       });
     });
+
+    it('expands bash style variables embedded in strings', function() {
+      var options = {
+        apiUrlV1: 'https://${API_HOST}/v1',
+        apiUrlV2: 'https://${API_HOST}/v2'
+      };
+
+      var expandedOptions = pluginOptions(options, {
+        env: {
+          API_HOST: {value: 'the.api.com'}
+        }
+      });
+
+      assert.deepEqual(expandedOptions, {
+        apiUrlV1: 'https://the.api.com/v1',
+        apiUrlV2: 'https://the.api.com/v2'
+      });
+    });
   });
 
   describe('regex expansion', function() {
