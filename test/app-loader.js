@@ -181,7 +181,7 @@ describe('virtualAppLoader()', function() {
       };
 
       this.appRegistry.getByDomain = function(name, callback) {
-        callback(null, {requireSsl: true, domains: [customDomain]});
+        callback(null, {requireSsl: true, domain: customDomain});
       };
 
       request(this.server)
