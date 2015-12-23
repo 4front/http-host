@@ -166,7 +166,7 @@ describe('virtualAppLoader()', function() {
       request(this.server)
         .get('/path')
         .set('Host', 'appname.testapps.com')
-        .expect(302)
+        .expect(301)
         .expect(function(res) {
           assert.equal(res.headers.location, 'https://appname.testapps.com/path');
         })
@@ -187,7 +187,7 @@ describe('virtualAppLoader()', function() {
       request(this.server)
         .get('/path')
         .set('Host', customDomain.domain)
-        .expect(302)
+        .expect(301)
         .expect(function(res) {
           assert.equal(res.headers.location, 'https://' + customDomain.domain + '/path');
         })
