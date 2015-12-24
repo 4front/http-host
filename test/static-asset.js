@@ -60,6 +60,7 @@ describe('staticAsset', function() {
     });
 
     this.server.use(function(err, req, res, next) {
+      // console.log(err.stack);
       res.status(500).end();
     });
   });
@@ -293,6 +294,31 @@ describe('staticAsset', function() {
       .expect(function(res) {
         assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/sitemap.xml'));
         assert.equal(res.text, contents);
+      })
+      .end(done);
+  });
+
+  it('gunzips encoded content when accepts header missing gzip', function(done) {
+    var metadata = {
+      contentEncoding: 'gzip',
+      contentType: 'application/json'
+    };
+
+    var spec = {swagger: 'spec'};
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(zlib.gzipSync(JSON.stringify(spec)), {
+        metadata: metadata
+      });
+    });
+
+    supertest(this.server)
+      .get('/swagger.json')
+      .set('Accept-Encoding', 'deflate')
+      .expect(200)
+      .expect(function(res) {
+        assert.deepEqual(res.body, spec);
+        assert.isTrue(_.isEmpty(res.headers['Content-Encoding']));
       })
       .end(done);
   });
