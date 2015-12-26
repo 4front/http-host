@@ -7,6 +7,7 @@ var async = require('async');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
+var compression = require('../lib/middleware/compression');
 var streamTestUtils = require('./stream-test-utils');
 var staticAsset = require('../lib/middleware/static-asset');
 
@@ -40,6 +41,7 @@ describe('staticAsset', function() {
     this.appId = shortid.generate();
     this.versionId = shortid.generate();
 
+    this.server.use(compression());
     this.server.get(this.server.settings.deployedAssetsPath + '/:appId/:versionId/*', staticAsset(this.server.settings));
 
     this.extendedRequest = {
@@ -294,6 +296,28 @@ describe('staticAsset', function() {
       .expect(function(res) {
         assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/sitemap.xml'));
         assert.equal(res.text, contents);
+      })
+      .end(done);
+  });
+
+  it('gzips un-compressed file from storage if client accepts', function(done) {
+    var text = 'hello!';
+    this.storage.readFileStream = function() {
+      return streamTestUtils.buffer(text, {
+        metadata: {contentType: 'text/plain'}
+      });
+    };
+
+    supertest(this.server)
+      .get('/hello.txt')
+      .set('Accept-Encoding', 'gzip')
+      .expect('Content-Type', /^text\/plain/)
+      .expect('Content-Encoding', 'gzip')
+      .expect('Cache-Control', 'no-cache')
+      .expect('etag', this.versionId)
+      .expect(200)
+      .expect(function(res) {
+        assert.equal(res.text, text);
       })
       .end(done);
   });
