@@ -173,6 +173,21 @@ describe('virtualAppLoader()', function() {
         .end(done);
     });
 
+    it('should redirect to https for root request', function(done) {
+      this.appRegistry.getByName = function(name, callback) {
+        callback(null, {requireSsl: true});
+      };
+
+      request(this.server)
+        .get('/')
+        .set('Host', 'appname.testapps.com')
+        .expect(301)
+        .expect(function(res) {
+          assert.equal(res.headers.location, 'https://appname.testapps.com');
+        })
+        .end(done);
+    });
+
     it('should redirect custom domains with certificates', function(done) {
       var customDomain = {
         domain: 'www.domain.net',

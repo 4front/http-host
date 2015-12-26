@@ -7,7 +7,8 @@ var async = require('async');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
-var compression = require('../lib/middleware/compression');
+// var compression = require('../lib/middleware/compression');
+var compression = require('compression');
 var streamTestUtils = require('./stream-test-utils');
 var staticAsset = require('../lib/middleware/static-asset');
 
@@ -314,6 +315,7 @@ describe('staticAsset', function() {
       .expect('Content-Type', /^text\/plain/)
       .expect('Content-Encoding', 'gzip')
       .expect('Cache-Control', 'no-cache')
+      .expect('Vary', 'Accept-Encoding')
       .expect('etag', this.versionId)
       .expect(200)
       .expect(function(res) {
@@ -338,11 +340,12 @@ describe('staticAsset', function() {
 
     supertest(this.server)
       .get('/swagger.json')
-      .set('Accept-Encoding', 'deflate')
+      .set('Accept-Encoding', 'none')
       .expect(200)
+      .expect('Vary', 'Accept-Encoding')
       .expect(function(res) {
         assert.deepEqual(res.body, spec);
-        assert.isTrue(_.isEmpty(res.headers['Content-Encoding']));
+        assert.isTrue(_.isEmpty(res.headers['content-encoding']));
       })
       .end(done);
   });
