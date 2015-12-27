@@ -3,13 +3,13 @@ var sinon = require('sinon');
 var zlib = require('zlib');
 var _ = require('lodash');
 var urljoin = require('url-join');
+var EventEmitter = require('./test-util').EventEmitter;
 var async = require('async');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
-// var compression = require('../lib/middleware/compression');
 var compression = require('compression');
-var streamTestUtils = require('./stream-test-utils');
+var sbuff = require('simple-bufferstream');
 var staticAsset = require('../lib/middleware/static-asset');
 
 require('dash-assert');
@@ -26,11 +26,13 @@ describe('staticAsset', function() {
 
     this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        var stream = streamTestUtils.buffer(self.responseText, {
-          metadata: self.metadata
+        var emitter = new EventEmitter();
+        process.nextTick(function() {
+          emitter.emit('metadata', self.metadata);
+          emitter.emit('stream', sbuff(self.responseText));
         });
 
-        return stream;
+        return emitter;
       })
     };
 
@@ -86,7 +88,12 @@ describe('staticAsset', function() {
 
   it('returns Content-Encoding header for gzipped assets', function(done) {
     this.storage.readFileStream = function() {
-      return streamTestUtils.emitter('metadata', {contentEncoding: 'gzip'});
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('metadata', {contentEncoding: 'gzip'});
+        emitter.emit('stream', sbuff(zlib.gzipSync(self.responseText)));
+      });
+      return emitter;
     };
 
     supertest(this.server)
@@ -98,9 +105,7 @@ describe('staticAsset', function() {
   });
 
   it('returns Content-Type from storage if it exists', function(done) {
-    this.storage.readFileStream = function() {
-      return streamTestUtils.emitter('metadata', {contentType: 'custom-type'});
-    };
+    this.metadata = {contentType: 'custom-type'};
 
     supertest(this.server)
       .get('/customtype.txt')
@@ -112,7 +117,11 @@ describe('staticAsset', function() {
   describe('returns 404 for missing files', function() {
     beforeEach(function() {
       this.storage.readFileStream = function() {
-        return streamTestUtils.emitter('missing');
+        var emitter = new EventEmitter();
+        process.nextTick(function() {
+          emitter.emit('missing');
+        });
+        return emitter;
       };
     });
 
@@ -133,7 +142,11 @@ describe('staticAsset', function() {
 
   it('returns 500 when storage throws error', function(done) {
     this.storage.readFileStream = function() {
-      return streamTestUtils.emitter('readError', new Error('some error'));
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('error', new Error('some error'));
+      });
+      return emitter;
     };
 
     async.series([
@@ -282,9 +295,12 @@ describe('staticAsset', function() {
 
     var contents = '<sitemap></sitemap>';
     this.storage.readFileStream = sinon.spy(function() {
-      return streamTestUtils.buffer(zlib.gzipSync(contents), {
-        metadata: metadata
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('metadata', metadata);
+        emitter.emit('stream', sbuff(zlib.gzipSync(contents)));
       });
+      return emitter;
     });
 
     supertest(this.server)
@@ -303,11 +319,14 @@ describe('staticAsset', function() {
 
   it('gzips un-compressed file from storage if client accepts', function(done) {
     var text = 'hello!';
-    this.storage.readFileStream = function() {
-      return streamTestUtils.buffer(text, {
-        metadata: {contentType: 'text/plain'}
+    this.storage.readFileStream = sinon.spy(function() {
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('metadata', {contentType: 'text/plain'});
+        emitter.emit('stream', sbuff(text));
       });
-    };
+      return emitter;
+    });
 
     supertest(this.server)
       .get('/hello.txt')
@@ -333,9 +352,12 @@ describe('staticAsset', function() {
     var spec = {swagger: 'spec'};
 
     this.storage.readFileStream = sinon.spy(function() {
-      return streamTestUtils.buffer(zlib.gzipSync(JSON.stringify(spec)), {
-        metadata: metadata
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('metadata', metadata);
+        emitter.emit('stream', sbuff(zlib.gzipSync(JSON.stringify(spec))));
       });
+      return emitter;
     });
 
     supertest(this.server)

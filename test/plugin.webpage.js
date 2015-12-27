@@ -5,9 +5,11 @@ var express = require('express');
 var shortid = require('shortid');
 var supertest = require('supertest');
 var urljoin = require('url-join');
-var streamTestUtils = require('./stream-test-utils');
 var testUtil = require('./test-util');
+var sbuff = require('simple-bufferstream');
 var webPage = require('../lib/plugins/webpage');
+var compression = require('compression');
+var EventEmitter = testUtil.EventEmitter;
 
 require('dash-assert');
 
@@ -23,7 +25,11 @@ describe('webPage', function() {
     this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
     this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        return streamTestUtils.buffer(self.pageContent);
+        var emitter = new EventEmitter();
+        process.nextTick(function() {
+          emitter.emit('stream', sbuff(self.pageContent));
+        });
+        return emitter;
       })
     };
 
@@ -38,6 +44,8 @@ describe('webPage', function() {
         name: 'v1'
       }
     };
+
+    this.server.use(compression());
 
     this.server.use(function(req, res, next) {
       req.ext = self.extendedRequest;
@@ -60,6 +68,7 @@ describe('webPage', function() {
       supertest(this.server)
         .get('/docs/getting-started?fake=1')
         .expect(200)
+        .expect('Content-Encoding', 'gzip')
         .expect('Virtual-App-Page', 'docs/getting-started.html')
         .expect(function(res) {
           assert.ok(self.server.settings.storage.readFileStream.calledWith(
@@ -120,11 +129,11 @@ describe('webPage', function() {
 
   it('returns 404 status code', function(done) {
     this.server.settings.storage.readFileStream = function() {
-      return streamTestUtils.emitter('missing')
-        .on('error', function() {
-          // Emit custom missing event
-          this.emit('missing');
-        });
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('missing');
+      });
+      return emitter;
     };
 
     supertest(this.server)
@@ -168,7 +177,11 @@ describe('webPage', function() {
 
   it('redirects to index.html when original path not found', function(done) {
     this.server.settings.storage.readFileStream = function() {
-      return streamTestUtils.emitter('missing');
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('missing');
+      });
+      return emitter;
     };
 
     this.server.settings.storage.fileExists = sinon.spy(function(pagePath, cb) {
@@ -395,6 +408,17 @@ describe('webPage', function() {
           .end(cb);
       }
     ], done);
+  });
+
+  it('does not gzip if client does not accept', function(done) {
+    supertest(this.server)
+      .get('/docs/getting-started')
+      .set('Accept-Encoding', 'none')
+      .expect(200)
+      .expect(function(res) {
+        assert.isEmpty(res.headers['content-encoding']);
+      })
+      .end(done);
   });
 });
 

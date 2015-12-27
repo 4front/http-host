@@ -20,11 +20,11 @@ module.exports = {
     rs._read = function() {
       var self = this;
 
-      if (_.isObject(emitEvents)) {
-        _.each(emitEvents, function(context, eventName) {
-          self.emit(eventName, context);
-        });
-      }
+      // if (_.isObject(emitEvents)) {
+      //   _.each(emitEvents, function(context, eventName) {
+      //     self.emit(eventName, context);
+      //   });
+      // }
       // this.emit('readable');
 
       process.nextTick(function() {
