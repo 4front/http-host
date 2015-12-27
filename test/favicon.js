@@ -1,10 +1,12 @@
 var assert = require('assert');
 var sinon = require('sinon');
 var fs = require('fs');
+var zlib = require('zlib');
 var path = require('path');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
+var compression = require('compression');
 var EventEmitter = require('./test-util').EventEmitter;
 var favicon = require('../lib/middleware/favicon');
 
@@ -38,6 +40,7 @@ describe('favicon', function() {
       next();
     });
 
+    this.server.use(compression());
     this.server.use(favicon(this.server.settings));
   });
 
@@ -65,6 +68,7 @@ describe('favicon', function() {
       .expect('Content-Type', 'image/x-icon')
       .expect('ETag', self.versionId)
       .expect('Cache-Control', 'no-cache')
+      .expect('Content-Encoding', 'gzip')
       .expect(200)
       .expect(function() {
         assert.isTrue(self.storage.readFileStream.calledWith(
@@ -72,6 +76,26 @@ describe('favicon', function() {
           self.extendedRequest.virtualAppVersion.versionId + '/' +
           'favicon.ico'));
       })
+      .end(done);
+  });
+
+  it('favicon gzip encoded in storage', function(done) {
+    this.storage.readFileStream = sinon.spy(function() {
+      var emitter = new EventEmitter();
+      process.nextTick(function() {
+        emitter.emit('metadata', {contentEncoding: 'gzip'});
+        emitter.emit('stream', fs.createReadStream(path.join(__dirname, './fixtures/favicon.ico'))
+          .pipe(zlib.createGzip()));
+      });
+      return emitter;
+    });
+
+    supertest(this.server)
+      .get('/favicon.ico')
+      .expect(200)
+      .expect('Content-Type', 'image/x-icon')
+      .expect('ETag', self.versionId)
+      .expect('Cache-Control', 'no-cache')
       .end(done);
   });
 
