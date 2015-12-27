@@ -80,7 +80,6 @@ describe('customErrors', function() {
 
     // Fallback error handler
     this.server.use(function(err, req, res, next) {
-      debugger;
       res.set('Error-Handler', 'fallback');
       res.status(err.status).send(err.message);
     });
