@@ -1,5 +1,5 @@
 {
-  "name": "4front-apphost",
+  "name": "4front-http-host",
   "version": "1.0.18",
   "description": "Core 4front http hosting functionality",
   "main": "index.js",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/4front/apphost"
+    "url": "https://github.com/4front/http-host"
   },
   "keywords": [
     "4front",
@@ -26,9 +26,9 @@
   "author": "David Von Lehman",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/4front/apphost/issues"
+    "url": "https://github.com/4front/http-host/issues"
   },
-  "homepage": "https://github.com/4front/apphost",
+  "homepage": "https://github.com/4front/http-host",
   "dependencies": {
     "accepts": "^1.3.0",
     "async": "^0.9.0",
@@ -73,6 +73,6 @@
     "supertest": "^0.15.0"
   },
   "engines": {
-    "node": ">= 0.12.0"
+    "node": ">= 4.2.0"
   }
 }

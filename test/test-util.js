@@ -2,19 +2,22 @@
 var EventEmitter = require('events');
 var util = require('util');
 
+require('simple-errors');
+
 // Test utility functions
 module.exports.errorHandler = function(err, req, res, next) {
   if (!err.status) err.status = 500;
 
   res.statusCode = err.status;
-  if (res.statusCode === 500) {
+  debugger;
+  if (res.statusCode === 500 && err.log !== false) {
     console.log(err.stack);
-    res.end(err.stack);
+    res.json(Error.toJson(err));
   } else {
     if (err.code) {
       res.set('Error-Code', err.code);
     }
-    res.send(err.toString());
+    res.json(Error.toJson(err));
   }
 };
 

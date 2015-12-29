@@ -13,7 +13,7 @@ var cookieParser = require('cookie-parser');
 var parseUrl = require('url').parse;
 var formatUrl = require('url').format;
 var helper = require('../lib/helper');
-var debug = require('debug')('4front-apphost:dev-sandbox-page');
+var debug = require('debug')('4front-http-host:dev-sandbox-page');
 
 require('simple-errors');
 

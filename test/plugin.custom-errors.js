@@ -99,7 +99,7 @@ describe('customErrors', function() {
             self.virtualAppVersion.versionId,
             '500.html')));
 
-        assert.ok(res.headers.etag);
+        assert.isUndefined(res.headers.etag);
         assert.ok(self.server.settings.logger.error.called);
       })
       .end(done);

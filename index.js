@@ -1,1 +1,1 @@
-module.exports = require('./lib/apphost');
+module.exports = require('./lib/http-host');

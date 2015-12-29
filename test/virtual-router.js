@@ -9,6 +9,9 @@ var sbuff = require('simple-bufferstream');
 var virtualRouter = require('../lib/middleware/virtual-router');
 var assert = require('assert');
 var path = require('path');
+var testUtil = require('./test-util');
+
+require('dash-assert');
 
 // TODO: Need to support 4 arrity middleware
 describe('virtualRouter', function() {
@@ -56,14 +59,7 @@ describe('virtualRouter', function() {
       res.json(req.ext);
     });
 
-    this.server.use(function(err, req, res, next) {
-      res.statusCode = err.status || 500;
-      if (res.statusCode >= 500 && res.statusCode !== 506) {
-        console.log(err.stack || err.message || err.toString());
-      }
-
-      res.json(err);
-    });
+    this.server.use(testUtil.errorHandler);
   });
 
   it('invokes two plugins', function(done) {
@@ -127,7 +123,7 @@ describe('virtualRouter', function() {
       .end(done);
   });
 
-  it('missing middleware function returns 506 response', function(done) {
+  it('missing middleware function returns 500 response', function(done) {
     this.manifest.router = [
       {
         module: 'invalid'
@@ -136,8 +132,9 @@ describe('virtualRouter', function() {
 
     supertest(this.server)
       .get('/')
-      .expect(506)
+      .expect(500)
       .expect(function(res) {
+        debugger;
         assert.equal(res.body.code, 'pluginLoadError');
       })
       .end(done);
