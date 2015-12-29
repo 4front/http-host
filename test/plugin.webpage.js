@@ -21,6 +21,7 @@ describe('webPage', function() {
     this.pageContent = '<html><head><title>test page</title></head><body><div></div></body></html>';
 
     this.server = express();
+    this.server.disable('etag');
 
     this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
     this.server.settings.storage = {

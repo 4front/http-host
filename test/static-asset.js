@@ -20,6 +20,8 @@ describe('staticAsset', function() {
   beforeEach(function() {
     self = this;
     this.server = express();
+    this.server.disable('etag');
+
     this.maxAge = 100000;
     this.responseText = 'OK';
     this.metadata = {};
