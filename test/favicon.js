@@ -7,7 +7,7 @@ var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
 var compression = require('compression');
-var EventEmitter = require('./test-util').EventEmitter;
+var streamTestUtils = require('./stream-test-utils');
 var favicon = require('../lib/middleware/favicon');
 
 require('dash-assert');
@@ -56,11 +56,7 @@ describe('favicon', function() {
 
   it('renders custom favicon', function(done) {
     this.storage.readFileStream = sinon.spy(function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('stream', fs.createReadStream(path.join(__dirname, './fixtures/favicon.ico')));
-      });
-      return emitter;
+      return fs.createReadStream(path.join(__dirname, './fixtures/favicon.ico'));
     });
 
     supertest(this.server)
@@ -81,13 +77,8 @@ describe('favicon', function() {
 
   it('favicon gzip encoded in storage', function(done) {
     this.storage.readFileStream = sinon.spy(function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('metadata', {contentEncoding: 'gzip'});
-        emitter.emit('stream', fs.createReadStream(path.join(__dirname, './fixtures/favicon.ico'))
-          .pipe(zlib.createGzip()));
-      });
-      return emitter;
+      return fs.createReadStream(path.join(__dirname, './fixtures/favicon.ico'))
+        .pipe(zlib.createGzip());
     });
 
     supertest(this.server)
@@ -101,11 +92,7 @@ describe('favicon', function() {
 
   it('falls back to default favicon', function(done) {
     this.storage.readFileStream = sinon.spy(function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('missing');
-      });
-      return emitter;
+      return streamTestUtils.emitter('missing');
     });
 
     supertest(this.server)

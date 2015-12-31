@@ -47,6 +47,7 @@
     "get-parameter-names": "^0.2.0",
     "htmlprep": "^1.0.21",
     "is-image": "^1.0.1",
+    "is-video": "^1.0.1",
     "jwt-simple": "^0.3.0",
     "lodash": "^3.0.1",
     "mime": "^1.3.4",

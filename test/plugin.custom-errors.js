@@ -5,7 +5,7 @@ var _ = require('lodash');
 var assert = require('assert');
 var sinon = require('sinon');
 var sbuff = require('simple-bufferstream');
-var EventEmitter = require('./test-util').EventEmitter;
+var testUtil = require('./test-util');
 var customErrors = require('../lib/plugins/custom-errors');
 
 require('dash-assert');
@@ -20,11 +20,7 @@ describe('customErrors', function() {
     this.server = express();
     this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        var emitter = new EventEmitter();
-        process.nextTick(function() {
-          emitter.emit('stream', sbuff('<html>custom error</html>'));
-        });
-        return emitter;
+        return sbuff('<html>custom error</html>');
       })
     };
 
@@ -140,11 +136,7 @@ describe('customErrors', function() {
 
   it('advances to fallback if page stream missing', function(done) {
     this.server.settings.storage.readFileStream = function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('missing');
-      });
-      return emitter;
+      return testUtil.createMissingStream();
     };
 
     supertest(this.server)

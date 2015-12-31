@@ -4,11 +4,11 @@ var express = require('express');
 var supertest = require('supertest');
 var _ = require('lodash');
 var async = require('async');
-var EventEmitter = require('./test-util').EventEmitter;
 var sbuff = require('simple-bufferstream');
 var virtualRouter = require('../lib/middleware/virtual-router');
 var assert = require('assert');
 var path = require('path');
+var streamUtils = require('./stream-test-utils');
 var testUtil = require('./test-util');
 
 require('dash-assert');
@@ -213,11 +213,7 @@ describe('virtualRouter', function() {
 
     this.server.settings.storage = {
       readFileStream: function() {
-        var emitter = new EventEmitter();
-        process.nextTick(function() {
-          emitter.emit('stream', sbuff(contents));
-        });
-        return emitter;
+        return streamUtils.buffer(contents);
       }
     };
 
@@ -247,11 +243,7 @@ describe('virtualRouter', function() {
 
     this.server.settings.storage = {
       readFileStream: function() {
-        var emitter = new EventEmitter();
-        process.nextTick(function() {
-          emitter.emit('stream', sbuff(contents));
-        });
-        return emitter;
+        return sbuff(contents);
       }
     };
 
@@ -266,19 +258,9 @@ describe('virtualRouter', function() {
   });
 
   it('returns 404 if no standard route', function(done) {
-    this.server.settings.deployer = {
-      serve: function(appId, versionId, filePath, res, next) {
-        next();
-      }
-    };
-
     this.server.settings.storage = {
       readFileStream: function() {
-        var emitter = new EventEmitter();
-        process.nextTick(function() {
-          emitter.emit('missing');
-        });
-        return emitter;
+        return streamUtils.emitter('missing');
       }
     };
 

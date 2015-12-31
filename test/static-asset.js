@@ -1,15 +1,14 @@
 var assert = require('assert');
 var sinon = require('sinon');
 var zlib = require('zlib');
+var compression = require('compression');
 var _ = require('lodash');
 var urljoin = require('url-join');
-var EventEmitter = require('./test-util').EventEmitter;
 var async = require('async');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
-var compression = require('compression');
-var sbuff = require('simple-bufferstream');
+var streamTestUtils = require('./stream-test-utils');
 var staticAsset = require('../lib/middleware/static-asset');
 
 require('dash-assert');
@@ -20,21 +19,17 @@ describe('staticAsset', function() {
   beforeEach(function() {
     self = this;
     this.server = express();
-    this.server.disable('etag');
-
     this.maxAge = 100000;
     this.responseText = 'OK';
     this.metadata = {};
 
     this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
-        var emitter = new EventEmitter();
-        process.nextTick(function() {
-          emitter.emit('metadata', self.metadata);
-          emitter.emit('stream', sbuff(self.responseText));
+        var stream = streamTestUtils.buffer(self.responseText, {
+          metadata: self.metadata
         });
 
-        return emitter;
+        return stream;
       })
     };
 
@@ -45,9 +40,6 @@ describe('staticAsset', function() {
 
     this.appId = shortid.generate();
     this.versionId = shortid.generate();
-
-    this.server.use(compression());
-    this.server.get(this.server.settings.deployedAssetsPath + '/:appId/:versionId/*', staticAsset(this.server.settings));
 
     this.extendedRequest = {
       virtualEnv: 'production',
@@ -60,6 +52,8 @@ describe('staticAsset', function() {
       next();
     });
 
+    this.server.use(compression());
+    this.server.get(this.server.settings.deployedAssetsPath + '/:appId/:versionId/*', staticAsset(this.server.settings));
     this.server.get('/*', staticAsset(this.server.settings));
 
     this.server.use(function(req, res, next) {
@@ -67,18 +61,17 @@ describe('staticAsset', function() {
     });
 
     this.server.use(function(err, req, res, next) {
-      // console.log(err.stack);
       res.status(500).end();
     });
   });
 
   it('serves static asset with max-age', function(done) {
-    var filePath = 'data/ok.text';
+    var filePath = 'data/ok.txt';
     var url = this.server.settings.deployedAssetsPath + '/' + this.appId + '/' + this.versionId + '/' + filePath;
     supertest(this.server)
       .get(url)
       .expect(200)
-      .expect('Content-Type', 'text/plain')
+      .expect('Content-Type', /text\/plain/)
       .expect('Cache-Control', 'max-age=' + self.server.settings.staticAssetMaxAge)
       .expect(function(res) {
         assert.equal(res.text, self.responseText);
@@ -90,12 +83,7 @@ describe('staticAsset', function() {
 
   it('returns Content-Encoding header for gzipped assets', function(done) {
     this.storage.readFileStream = function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('metadata', {contentEncoding: 'gzip'});
-        emitter.emit('stream', sbuff(zlib.gzipSync(self.responseText)));
-      });
-      return emitter;
+      return streamTestUtils.emitter('metadata', {contentEncoding: 'gzip'});
     };
 
     supertest(this.server)
@@ -106,24 +94,10 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('returns Content-Type from storage if it exists', function(done) {
-    this.metadata = {contentType: 'custom-type'};
-
-    supertest(this.server)
-      .get('/customtype.txt')
-      .expect(200)
-      .expect('Content-Type', 'custom-type')
-      .end(done);
-  });
-
   describe('returns 404 for missing files', function() {
     beforeEach(function() {
       this.storage.readFileStream = function() {
-        var emitter = new EventEmitter();
-        process.nextTick(function() {
-          emitter.emit('missing');
-        });
-        return emitter;
+        return streamTestUtils.emitter('missing');
       };
     });
 
@@ -144,11 +118,7 @@ describe('staticAsset', function() {
 
   it('returns 500 when storage throws error', function(done) {
     this.storage.readFileStream = function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('error', new Error('some error'));
-      });
-      return emitter;
+      return streamTestUtils.emitter('readError', new Error('some error'));
     };
 
     async.series([
@@ -239,16 +209,6 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('skips middleware for .html requests', function(done) {
-    supertest(this.server)
-      .get('/blog.html')
-      .expect(404)
-      .expect(function(res) {
-        assert.isFalse(self.storage.readFileStream.called);
-      })
-      .end(done);
-  });
-
   it('redirects request to localhost for dev sandbox', function(done) {
     this.extendedRequest.virtualEnv = 'local';
     this.extendedRequest.devOptions = { port: 9999 };
@@ -289,28 +249,35 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('returns gzipped sitemap.xml', function(done) {
-    var metadata = {
-      contentEncoding: 'gzip',
-      contentType: 'application/xml'
-    };
+  it('redirects videos to CDN', function(done) {
+    this.server.settings.deployedAssetsPath = 'cdnhost.net';
+    var filePath = '/video.mp4';
+    supertest(this.server)
+      .get(filePath)
+      .expect(302)
+      .expect(function(res) {
+        assert.isFalse(self.storage.readFileStream.called);
+        assert.equal(res.headers.location, urljoin('http://', self.server.settings.deployedAssetsPath,
+          self.appId, self.versionId, filePath));
+      })
+      .end(done);
+  });
 
+  it('returns gzipped sitemap.xml', function(done) {
     var contents = '<sitemap></sitemap>';
+
     this.storage.readFileStream = sinon.spy(function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('metadata', metadata);
-        emitter.emit('stream', sbuff(zlib.gzipSync(contents)));
+      return streamTestUtils.buffer(zlib.gzipSync(contents), {
+        metadata: {contentEncoding: 'gzip'}
       });
-      return emitter;
     });
 
     supertest(this.server)
       .get('/sitemap.xml')
-      .expect('Content-Type', metadata.contentType)
-      .expect('Content-Encoding', metadata.contentEncoding)
+      .expect('Content-Type', 'application/xml')
+      .expect('Content-Encoding', 'gzip')
       .expect('Cache-Control', 'no-cache')
-      .expect('etag', this.versionId)
+      .expect('ETag', this.versionId)
       .expect(200)
       .expect(function(res) {
         assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/sitemap.xml'));
@@ -321,13 +288,9 @@ describe('staticAsset', function() {
 
   it('gzips un-compressed file from storage if client accepts', function(done) {
     var text = 'hello!';
+
     this.storage.readFileStream = sinon.spy(function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('metadata', {contentType: 'text/plain'});
-        emitter.emit('stream', sbuff(text));
-      });
-      return emitter;
+      return streamTestUtils.buffer(text, {metadata: {}});
     });
 
     supertest(this.server)
@@ -337,7 +300,7 @@ describe('staticAsset', function() {
       .expect('Content-Encoding', 'gzip')
       .expect('Cache-Control', 'no-cache')
       .expect('Vary', 'Accept-Encoding')
-      .expect('etag', this.versionId)
+      .expect('ETag', this.versionId)
       .expect(200)
       .expect(function(res) {
         assert.equal(res.text, text);
@@ -346,20 +309,16 @@ describe('staticAsset', function() {
   });
 
   it('gunzips encoded content when accepts header missing gzip', function(done) {
-    var metadata = {
-      contentEncoding: 'gzip',
-      contentType: 'application/json'
-    };
-
     var spec = {swagger: 'spec'};
 
+    this.storage.getMetadata = sinon.spy(function(filePath, callback) {
+      callback(null, {contentEncoding: 'gzip'});
+    });
+
     this.storage.readFileStream = sinon.spy(function() {
-      var emitter = new EventEmitter();
-      process.nextTick(function() {
-        emitter.emit('metadata', metadata);
-        emitter.emit('stream', sbuff(zlib.gzipSync(JSON.stringify(spec))));
+      return streamTestUtils.buffer(zlib.gzipSync(JSON.stringify(spec)), {
+        metadata: {contentEncoding: 'gzip'}
       });
-      return emitter;
     });
 
     supertest(this.server)
@@ -367,7 +326,9 @@ describe('staticAsset', function() {
       .set('Accept-Encoding', 'none')
       .expect(200)
       .expect('Vary', 'Accept-Encoding')
+      .expect('Content-Type', /application\/json/)
       .expect(function(res) {
+        assert.isTrue(self.storage.getMetadata.calledWith(self.appId + '/' + self.versionId + '/swagger.json'));
         assert.deepEqual(res.body, spec);
         assert.isTrue(_.isEmpty(res.headers['content-encoding']));
       })
