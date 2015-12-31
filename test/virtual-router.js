@@ -134,13 +134,12 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(500)
       .expect(function(res) {
-        debugger;
         assert.equal(res.body.code, 'pluginLoadError');
       })
       .end(done);
   });
 
-  it('returns 506 response for invalid method', function(done) {
+  it('returns 500 response for invalid method', function(done) {
     this.manifest.router = [
       {
         module: 'passthrough',
@@ -151,7 +150,7 @@ describe('virtualRouter', function() {
 
     supertest(this.server)
       .get('/')
-      .expect(506)
+      .expect(500)
       .expect(function(res) {
         assert.equal(res.body.code, 'invalidVirtualRouteMethod');
       })

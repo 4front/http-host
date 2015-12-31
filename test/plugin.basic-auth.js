@@ -25,7 +25,11 @@ describe('basicAuth()', function() {
         self.failedLogins++;
         callback(null, self.failedLogins);
       }),
-      expire: sinon.spy(function() {})
+      expire: sinon.spy(function() {}),
+      get: sinon.spy(function(key, callback) {
+        callback(null, 0);
+      }),
+      del: sinon.spy(function() {})
     };
 
     this.options = {
@@ -84,11 +88,12 @@ describe('basicAuth()', function() {
       supertest(server)
         .get('/')
         .set('Authorization', authHeader(self.options.username, 'wrong'))
-        .expect(401)
         .expect(function(res) {
           if (n === 3) {
+            assert.equal(403, res.status);
             assert.equal(res.body.code, 'tooManyFailedLoginAttempts');
           } else {
+            assert.equal(401, res.status);
             assert.equal(res.headers['www-authenticate'], 'Basic realm="' + self.options.realm + '"');
           }
         })
