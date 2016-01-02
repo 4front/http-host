@@ -54,6 +54,7 @@
     "path-to-regexp": "^1.2.0",
     "serve-favicon": "^2.3.0",
     "simple-errors": "^1.0.0",
+    "uglify-js": "^2.6.1",
     "uid-safe": "^2.0.0",
     "url-join": "0.0.1",
     "vary": "^1.1.0"

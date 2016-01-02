@@ -14,8 +14,14 @@
     document.addEventListener('DOMContentLoaded', function() {
       // Show login form.
       var authForm = document.querySelector('[data-basic-auth-form]');
+      var usernameElem = document.querySelector('[data-basic-auth-username]');
+      var passwordElem = document.querySelector('[data-basic-auth-password]');
+
+      // Ensure all the required elements are not present.
+      if (!authForm || !usernameElem || !passwordElem) return;
+
       authForm.addEventListener('submit', function(event) {
-        authHeader = 'Basic ' + btoa(document.getElementById('username').value + ':' + document.getElementById('password').value);
+        authHeader = 'Basic ' + btoa(usernameElem.value + ':' + passwordElem.value);
         login();
         event.preventDefault();
       });
