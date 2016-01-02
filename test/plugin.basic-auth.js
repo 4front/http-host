@@ -6,7 +6,7 @@ var async = require('async');
 // var _ = require('lodash');
 var supertest = require('supertest');
 var assert = require('assert');
-var sbuff = require('simple-bufferstream');
+var streamTestUtils = require('./stream-test-utils');
 var testUtil = require('./test-util');
 
 require('dash-assert');
@@ -35,7 +35,8 @@ describe('basicAuth()', function() {
     this.options = {
       realm: 'realm',
       username: 'username',
-      password: 'password'
+      password: 'password',
+      maxFailedLogins: 3
     };
 
     self.appId = shortid.generate();
@@ -89,6 +90,7 @@ describe('basicAuth()', function() {
         .get('/')
         .set('Authorization', authHeader(self.options.username, 'wrong'))
         .expect(function(res) {
+          assert.equal(server.settings.cache.incr.callCount, 4);
           if (n === 3) {
             assert.equal(403, res.status);
             assert.equal(res.body.code, 'tooManyFailedLoginAttempts');
@@ -114,11 +116,7 @@ describe('basicAuth()', function() {
 
       server.settings.storage = {
         readFileStream: sinon.spy(function() {
-          var emitter = new testUtil.EventEmitter;
-          process.nextTick(function() {
-            emitter.emit('stream', sbuff(loginPageContent));
-          });
-          return emitter;
+          return streamTestUtils.buffer(loginPageContent);
         })
       };
     });
@@ -162,14 +160,11 @@ describe('basicAuth()', function() {
 
     it('uses browser prompt if login page missing', function(done) {
       server.settings.storage.readFileStream = function() {
-        var emitter = new testUtil.EventEmitter;
-        process.nextTick(function() {
-          emitter.emit('missing');
-        });
-        return emitter;
+        return streamTestUtils.emitter('missing');
       };
 
       supertest(server).get('/')
+        .expect(401)
         .expect('www-authenticate', /^Basic/)
         .expect('Access denied')
         .end(done);
