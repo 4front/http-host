@@ -4,11 +4,8 @@ var express = require('express');
 var supertest = require('supertest');
 var _ = require('lodash');
 var async = require('async');
-var sbuff = require('simple-bufferstream');
 var virtualRouter = require('../lib/middleware/virtual-router');
 var assert = require('assert');
-var path = require('path');
-var streamUtils = require('./stream-test-utils');
 var testUtil = require('./test-util');
 
 require('dash-assert');
@@ -43,13 +40,8 @@ describe('virtualRouter', function() {
       next();
     });
 
-    virtualRouterOptions = {
-      builtInPluginsDir: [
-        path.join(__dirname, './fixtures/plugins'),
-        path.join(__dirname, '../lib/plugins')
-      ],
-      autoIncludeWebpagePlugin: false
-    };
+    virtualRouterOptions = _.extend({autoIncludeWebpagePlugin: false},
+      require('./fixtures/plugin-loader-settings'));
 
     this.server.use(function(req, res, next) {
       virtualRouter(virtualRouterOptions)(req, res, next);
@@ -134,7 +126,7 @@ describe('virtualRouter', function() {
       .get('/')
       .expect(500)
       .expect(function(res) {
-        assert.equal(res.body.code, 'pluginLoadError');
+        assert.equal(res.body.code, 'pluginRequireError');
       })
       .end(done);
   });
@@ -207,23 +199,13 @@ describe('virtualRouter', function() {
   });
 
   it('uses default router if no manifest', function(done) {
-    var contents = '<html></html>';
-
     virtualRouterOptions.autoIncludeWebpagePlugin = true;
-
-    this.server.settings.storage = {
-      readFileStream: function() {
-        return streamUtils.buffer(contents);
-      }
-    };
 
     supertest(this.server)
       .get('/')
       .expect(200)
       .expect('Content-Type', /text\/html/)
-      .expect(function(res) {
-        assert.equal(contents, res.text);
-      })
+      .expect('<html><head></head></html>')
       .end(done);
   });
 
@@ -238,32 +220,18 @@ describe('virtualRouter', function() {
       }
     ];
 
-    var contents = '<html></html>';
     virtualRouterOptions.autoIncludeWebpagePlugin = true;
-
-    this.server.settings.storage = {
-      readFileStream: function() {
-        return sbuff(contents);
-      }
-    };
 
     supertest(this.server)
       .get('/')
       .expect(200)
       .expect('Content-Type', /text\/html/)
-      .expect(function(res) {
-        assert.equal(contents, res.text);
-      })
+      .expect('<html><head></head></html>')
       .end(done);
   });
 
   it('returns 404 if no standard route', function(done) {
-    this.server.settings.storage = {
-      readFileStream: function() {
-        return streamUtils.emitter('missing');
-      }
-    };
-
+    virtualRouterOptions.autoIncludeWebpagePlugin = false;
     this.manifest.router = [
       {
         module: 'sendtext',

@@ -1,4 +1,4 @@
-var basicAuth = require('../lib/plugins/basic-auth');
+var basicAuth = require('../lib/plugins/basic-auth2');
 var sinon = require('sinon');
 var express = require('express');
 var shortid = require('shortid');
@@ -85,12 +85,11 @@ describe('basicAuth()', function() {
   });
 
   it('after max failures returns error', function(done) {
-    async.times(4, function(n, next) {
+    async.timesSeries(4, function(n, next) {
       supertest(server)
         .get('/')
         .set('Authorization', authHeader(self.options.username, 'wrong'))
         .expect(function(res) {
-          assert.equal(server.settings.cache.incr.callCount, 4);
           if (n === 3) {
             assert.equal(403, res.status);
             assert.equal(res.body.code, 'tooManyFailedLoginAttempts');
