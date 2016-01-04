@@ -21,8 +21,7 @@
   ],
   "files": [
     "lib",
-    "index.js",
-    "scripts"
+    "index.js"
   ],
   "author": "David Von Lehman",
   "license": "Apache-2.0",
