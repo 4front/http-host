@@ -44,7 +44,8 @@ describe('basicAuth()', function() {
     server.use(function(req, res, next) {
       req.ext = {
         virtualApp: {appId: self.appId},
-        virtualAppVersion: {versionId: self.versionId}
+        virtualAppVersion: {versionId: self.versionId},
+        clientConfig: {}
       };
       next();
     });
