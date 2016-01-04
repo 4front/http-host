@@ -3,7 +3,6 @@ var sinon = require('sinon');
 var express = require('express');
 var shortid = require('shortid');
 var async = require('async');
-// var _ = require('lodash');
 var supertest = require('supertest');
 var assert = require('assert');
 var streamTestUtils = require('./stream-test-utils');
