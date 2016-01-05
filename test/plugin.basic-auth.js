@@ -1,4 +1,4 @@
-var basicAuth = require('../lib/plugins/basic-auth2');
+var basicAuth = require('../lib/plugins/basic-auth');
 var sinon = require('sinon');
 var express = require('express');
 var shortid = require('shortid');
@@ -78,7 +78,6 @@ describe('basicAuth()', function() {
       .set('Authorization', authHeader(this.options.username, 'wrong'))
       .expect(401)
       .expect(function(res) {
-        assert.equal(res.text, 'Access denied');
         assert.equal(res.headers['www-authenticate'], 'Basic realm="' + self.options.realm + '"');
       })
       .end(done);
@@ -106,6 +105,17 @@ describe('basicAuth()', function() {
       assert.equal(server.settings.cache.expire.callCount, 1);
       done();
     });
+  });
+
+  it('recognizes logout xhr request', function(done) {
+    supertest(server)
+      .get('/')
+      .set('Authorization', authHeader('__invalid', '__invalid__'))
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('X-Request-Logout', '1')
+      .expect(401)
+      .expect('Logged out')
+      .end(done);
   });
 
   describe('custom login form', function() {
@@ -165,7 +175,6 @@ describe('basicAuth()', function() {
       supertest(server).get('/')
         .expect(401)
         .expect('www-authenticate', /^Basic/)
-        .expect('Access denied')
         .end(done);
     });
   });
