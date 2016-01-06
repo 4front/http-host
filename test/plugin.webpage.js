@@ -326,7 +326,7 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        assert.notEqual(res.text.indexOf('_global=__4front__='), -1);
+        assert.notEqual(res.text.indexOf('__4front__=_global'), -1);
       })
       .end(done);
   });
@@ -410,5 +410,5 @@ describe('webPage', function() {
 });
 
 function parseClientConfig(text) {
-  return JSON.parse(text.match(/__4front__=(.*);/)[1]);
+  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
 }

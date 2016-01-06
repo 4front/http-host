@@ -288,4 +288,23 @@ describe('virtualRouter', function() {
       }
     ], done);
   });
+
+  it('top level options passed to plugins', function(done) {
+    this.manifest = {
+      clientConfigVar: 'customGlobal',
+      router: [
+        {
+          module: 'echo'
+        }
+      ]
+    };
+
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect(function(res) {
+        assert.equal(res.body.options.clientConfigVar, 'customGlobal');
+      })
+      .end(done);
+  });
 });
