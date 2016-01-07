@@ -1,4 +1,5 @@
 var assert = require('assert');
+var _ = require('lodash');
 var async = require('async');
 var sinon = require('sinon');
 var express = require('express');
@@ -27,14 +28,17 @@ describe('webPage', function() {
       })
     };
 
+    this.appId = shortid.generate();
+    this.versionId = shortid.generate();
+
     this.extendedRequest = {
       virtualApp: {
-        appId: shortid.generate(),
+        appId: this.appId,
         name: 'test-app'
       },
       virtualEnv: 'production',
       virtualAppVersion: {
-        versionId: shortid.generate(),
+        versionId: this.versionId,
         name: 'v1'
       }
     };
@@ -53,6 +57,16 @@ describe('webPage', function() {
     });
 
     this.server.use(testUtil.errorHandler);
+  });
+
+  it('skips plugin for non-html extension', function(done) {
+    supertest(this.server)
+      .get('/hello.txt')
+      .expect(404)
+      .expect(function(res) {
+        assert.isFalse(self.server.settings.storage.readFileStream.called);
+      })
+      .end(done);
   });
 
   describe('html page request', function() {
@@ -118,22 +132,6 @@ describe('webPage', function() {
       .end(done);
   });
 
-  it('returns 404 status code', function(done) {
-    this.server.settings.storage.readFileStream = function() {
-      return streamTestUtils.emitter('missing')
-        .on('error', function() {
-          // Emit custom missing event
-          this.emit('missing');
-        });
-    };
-
-    supertest(this.server)
-      .get('/')
-      .expect(404)
-      .expect('Error-Code', 'pageNotFound')
-      .end(done);
-  });
-
   it('defaults to no-cache header', function(done) {
     supertest(this.server)
       .get('/')
@@ -166,26 +164,68 @@ describe('webPage', function() {
       .end(done);
   });
 
-  it('redirects to index.html when original path not found', function(done) {
-    this.server.settings.storage.readFileStream = function() {
-      return streamTestUtils.emitter('missing');
-    };
+  describe('missing alternate redirects', function() {
+    beforeEach(function() {
+      self = this;
+      this.existingFiles = [];
+      this.server.settings.storage.readFileStream = function() {
+        return streamTestUtils.emitter('missing');
+      };
 
-    this.server.settings.storage.fileExists = sinon.spy(function(pagePath, cb) {
-      cb(null, true);
+      this.server.settings.storage.fileExists = sinon.spy(function(filePath, cb) {
+        cb(null, _.contains(self.existingFiles, filePath));
+      });
     });
 
-    supertest(this.server)
-      .get('/blog')
-      .expect(302)
-      .expect(function(res) {
-        assert.equal(res.headers.location, '/blog/');
-        assert.isTrue(self.server.settings.storage.fileExists.calledWith(
-          self.extendedRequest.virtualApp.appId + '/' +
-          self.extendedRequest.virtualAppVersion.versionId +
-          '/blog/index.html'));
-      })
-      .end(done);
+    it('trailing slash version when original non-trailing slash missing', function(done) {
+      this.existingFiles.push(this.appId + '/' + this.versionId + '/blog/index.html');
+
+      supertest(this.server)
+        .get('/blog')
+        .expect(301)
+        .expect(function(res) {
+          assert.equal(res.headers.location, '/blog/');
+          assert.isTrue(self.server.settings.storage.fileExists.calledWith(
+            self.appId + '/' + self.versionId + '/blog/index.html'));
+        })
+        .end(done);
+    });
+
+    it('non-trailing slash version when trailing slash requested', function(done) {
+      this.existingFiles.push(this.appId + '/' + this.versionId + '/blog.html');
+
+      supertest(this.server)
+        .get('/blog/')
+        .expect(301)
+        .expect(function(res) {
+          assert.equal(res.headers.location, '/blog');
+          assert.isTrue(self.server.settings.storage.fileExists.calledWith(
+            self.appId + '/' + self.versionId + '/blog.html'));
+        })
+        .end(done);
+    });
+
+    it('to lowercase version when uppercase letters present', function(done) {
+      this.existingFiles.push(this.appId + '/' + this.versionId + '/path/about.html');
+
+      supertest(this.server)
+        .get('/Path/About')
+        // .expect(301)
+        .expect(function(res) {
+          assert.equal(res.headers.location, '/path/about');
+          assert.isTrue(self.server.settings.storage.fileExists.calledWith(
+            self.appId + '/' + self.versionId + '/path/about.html'));
+        })
+        .end(done);
+    });
+
+    it('returns 404 if no alternates found', function(done) {
+      supertest(this.server)
+        .get('/')
+        .expect(404)
+        .expect('Error-Code', 'pageNotFound')
+        .end(done);
+    });
   });
 
   describe('client config object', function() {
@@ -276,24 +316,24 @@ describe('webPage', function() {
     });
   });
 
-  describe('canonical redirects', function() {
-    beforeEach(function() {
-      this.options.canonicalRedirects = true;
-    });
-
-    it('detects html extension', function(done) {
+  describe('redirects', function() {
+    it('redirect request with html extension to extensionless', function(done) {
       supertest(this.server)
         .get('/about.html')
         .expect(301)
-        .expect(/Redirecting to \/about$/)
+        .expect(function(res) {
+          assert.equal('/about', res.headers.location);
+        })
         .end(done);
     });
 
-    it('detects uppercase letters', function(done) {
+    it('redirects index.html to bare trailing slash', function(done) {
       supertest(this.server)
-        .get('/path/ABOUT')
+        .get('/about/index.html')
         .expect(301)
-        .expect(/Redirecting to \/path\/about$/)
+        .expect(function(res) {
+          assert.equal('/about/', res.headers.location);
+        })
         .end(done);
     });
   });

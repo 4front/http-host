@@ -65,6 +65,28 @@ describe('staticAsset', function() {
     });
   });
 
+  describe('skips plugin', function() {
+    it('for .html extenstions', function(done) {
+      supertest(this.server)
+        .get('/index.html')
+        .expect(404)
+        .expect(function(res) {
+          assert.isFalse(self.storage.readFileStream.called);
+        })
+        .end(done);
+    });
+
+    it('for extension-less', function(done) {
+      supertest(this.server)
+        .get('/about')
+        .expect(404)
+        .expect(function(res) {
+          assert.isFalse(self.storage.readFileStream.called);
+        })
+        .end(done);
+    });
+  });
+
   it('serves static asset with max-age', function(done) {
     var filePath = 'data/ok.txt';
     var url = this.server.settings.deployedAssetsPath + '/' + this.appId + '/' + this.versionId + '/' + filePath;
