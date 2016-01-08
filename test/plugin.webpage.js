@@ -182,7 +182,8 @@ describe('webPage', function() {
 
       supertest(this.server)
         .get('/blog')
-        .expect(301)
+        .expect(302)
+        .expect('Cache-Control', 'no-cache')
         .expect(function(res) {
           assert.equal(res.headers.location, '/blog/');
           assert.isTrue(self.server.settings.storage.fileExists.calledWith(
@@ -196,7 +197,7 @@ describe('webPage', function() {
 
       supertest(this.server)
         .get('/blog/')
-        .expect(301)
+        .expect(302)
         .expect(function(res) {
           assert.equal(res.headers.location, '/blog');
           assert.isTrue(self.server.settings.storage.fileExists.calledWith(
@@ -210,7 +211,7 @@ describe('webPage', function() {
 
       supertest(this.server)
         .get('/Path/About')
-        .expect(301)
+        .expect(302)
         .expect(function(res) {
           assert.equal(res.headers.location, '/path/about');
           assert.isTrue(self.server.settings.storage.fileExists.calledWith(
