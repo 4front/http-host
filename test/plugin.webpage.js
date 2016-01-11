@@ -86,7 +86,7 @@ describe('webPage', function() {
 
     it('uses default page for root request', function(done) {
       supertest(this.server)
-        .get('/')
+        .get('/?foo=1&blah=5')
         .expect(200)
         .expect('Virtual-App-Page', 'index.html')
         .expect(function(res) {
@@ -341,6 +341,16 @@ describe('webPage', function() {
     it('redirects index.html to bare trailing slash', function(done) {
       supertest(this.server)
         .get('/about/index.html')
+        .expect(301)
+        .expect(function(res) {
+          assert.equal('/about/', res.headers.location);
+        })
+        .end(done);
+    });
+
+    it('redirect /index to bare trailing slash', function(done) {
+      supertest(this.server)
+        .get('/about/index')
         .expect(301)
         .expect(function(res) {
           assert.equal('/about/', res.headers.location);
