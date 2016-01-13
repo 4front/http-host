@@ -245,42 +245,15 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('redirects images without appId and versionId fingerprint', function(done) {
+  it('serves media files', function(done) {
     var filePath = '/images/photo.png';
     supertest(this.server)
       .get(filePath)
-      .expect(302)
+      .expect(200)
+      .expect('Content-Type', 'image/png')
       .expect(function(res) {
-        assert.isFalse(self.storage.readFileStream.called);
-        assert.equal(res.headers.location, urljoin(self.server.settings.deployedAssetsPath, self.appId, self.versionId, filePath));
-      })
-      .end(done);
-  });
-
-  it('redirects images to CDN', function(done) {
-    this.server.settings.deployedAssetsPath = 'cdnhost.net';
-    var filePath = '/images/photo.png';
-    supertest(this.server)
-      .get(filePath)
-      .expect(302)
-      .expect(function(res) {
-        assert.isFalse(self.storage.readFileStream.called);
-        assert.equal(res.headers.location, urljoin('http://', self.server.settings.deployedAssetsPath,
-          self.appId, self.versionId, filePath));
-      })
-      .end(done);
-  });
-
-  it('redirects videos to CDN', function(done) {
-    this.server.settings.deployedAssetsPath = 'cdnhost.net';
-    var filePath = '/video.mp4';
-    supertest(this.server)
-      .get(filePath)
-      .expect(302)
-      .expect(function(res) {
-        assert.isFalse(self.storage.readFileStream.called);
-        assert.equal(res.headers.location, urljoin('http://', self.server.settings.deployedAssetsPath,
-          self.appId, self.versionId, filePath));
+        assert.isTrue(self.storage.readFileStream.calledWith(urljoin(
+          self.appId, self.versionId, 'images/photo.png')));
       })
       .end(done);
   });

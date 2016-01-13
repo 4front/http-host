@@ -50,7 +50,9 @@ describe('webPage', function() {
 
     this.options = {};
 
-    this.server.get('/*', webPage(this.options));
+    this.server.get('/*', function(req, res, next) {
+      webPage(self.options)(req, res, next);
+    });
 
     this.server.all('*', function(req, res, next) {
       next(Error.http(404, 'Page not found', {code: 'pageNotFound'}));
@@ -210,10 +212,10 @@ describe('webPage', function() {
       this.existingFiles.push(this.appId + '/' + this.versionId + '/path/about.html');
 
       supertest(this.server)
-        .get('/Path/About')
-        .expect(302)
+        .get('/Path/About?foo=1')
+        .expect(301)
         .expect(function(res) {
-          assert.equal(res.headers.location, '/path/about');
+          assert.equal(res.headers.location, '/path/about?foo=1');
           assert.isTrue(self.server.settings.storage.fileExists.calledWith(
             self.appId + '/' + self.versionId + '/path/about.html'));
         })
@@ -350,10 +352,21 @@ describe('webPage', function() {
 
     it('redirect /index to bare trailing slash', function(done) {
       supertest(this.server)
-        .get('/about/index')
+        .get('/about/index?name=bill')
         .expect(301)
         .expect(function(res) {
-          assert.equal('/about/', res.headers.location);
+          assert.equal('/about/?name=bill', res.headers.location);
+        })
+        .end(done);
+    });
+
+    it('does not redirect .html if canonicalRedirects is false', function(done) {
+      this.options.canonicalRedirects = false;
+      supertest(this.server)
+        .get('/about/index.html')
+        .expect(200)
+        .expect(function(res) {
+          assert.isTrue(self.server.settings.storage.readFileStream.calledWith(sinon.match(/\/about\/index\.html$/)));
         })
         .end(done);
     });
