@@ -7,11 +7,16 @@ var request = require('supertest');
 var _ = require('lodash');
 var testUtil = require('./test-util');
 var debug = require('debug');
+var shortid = require('shortid');
+
+require('dash-assert');
 
 describe('trafficControl()', function() {
+  var self;
   beforeEach(function() {
-    var self = this;
+    self = this;
 
+    this.appId = shortid.generate();
     this.server = express();
     this.server.settings.database = {
       getVersion: sinon.spy(function(appId, versionId, callback) {
@@ -23,6 +28,7 @@ describe('trafficControl()', function() {
     this.extendedRequest = {
       virtualEnv: 'production',
       virtualApp: {
+        appId: self.appId,
         trafficRules: {
           production: [
             {rule: '*', versionId: '1'}
@@ -140,6 +146,32 @@ describe('trafficControl()', function() {
       .expect('Virtual-App-Version-Method', 'trafficRules')
       .expect(function(res) {
         assert.ok(res.headers['set-cookie'][0].indexOf('_version=;') > -1);
+      })
+      .end(done);
+  });
+
+  it('gets most recent version if trafficRules is undefined', function(done) {
+    this.extendedRequest.virtualApp.trafficRules = null;
+
+    var mostRecentVersion = {versionId: shortid.generate()};
+    _.extend(this.server.settings.database, {
+      mostRecentVersion: sinon.spy(function(appId, virtualEnv, cb) {
+        cb(null, mostRecentVersion);
+      }),
+      updateTrafficRules: sinon.spy(function(appId, virtualEnv, trafficRules, cb) {
+        cb();
+      })
+    });
+
+    request(this.server)
+      .get('/')
+      .expect(200)
+      .expect('Virtual-App-Version-Id', mostRecentVersion.versionId)
+      .expect('Virtual-App-Version-Method', 'trafficRules')
+      .expect(function(res) {
+        assert.isTrue(self.server.settings.database.mostRecentVersion.calledWith(self.appId));
+        assert.isTrue(self.server.settings.database.updateTrafficRules.calledWith(
+          self.appId, self.extendedRequest.virtualEnv, {production: [{versionId: mostRecentVersion.versionId, rule: '*'}]}));
       })
       .end(done);
   });
