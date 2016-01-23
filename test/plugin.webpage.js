@@ -470,17 +470,6 @@ describe('webPage', function() {
       }
     ], done);
   });
-
-  // it('does not gzip if client does not accept', function(done) {
-  //   supertest(this.server)
-  //     .get('/docs/getting-started')
-  //     .set('Accept-Encoding', 'none')
-  //     .expect(200)
-  //     .expect(function(res) {
-  //       assert.isEmpty(res.headers['content-encoding']);
-  //     })
-  //     .end(done);
-  // });
 });
 
 function parseClientConfig(text) {

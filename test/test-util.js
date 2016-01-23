@@ -9,7 +9,6 @@ module.exports.errorHandler = function(err, req, res, next) {
   if (!err.status) err.status = 500;
 
   res.statusCode = err.status;
-  debugger;
   if (res.statusCode === 500 && err.log !== false) {
     console.log(err.stack);
     res.json(Error.toJson(err));

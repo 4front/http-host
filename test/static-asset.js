@@ -61,7 +61,8 @@ describe('staticAsset', function() {
     });
 
     this.server.use(function(err, req, res, next) {
-      res.status(500).end();
+      if (!err.status) err.status = 500;
+      res.status(err.status).end();
     });
   });
 
@@ -327,6 +328,13 @@ describe('staticAsset', function() {
         assert.deepEqual(res.body, spec);
         assert.isTrue(_.isEmpty(res.headers['content-encoding']));
       })
+      .end(done);
+  });
+
+  it('returns 404 for package.json', function(done) {
+    supertest(this.server)
+      .get('/package.json')
+      .expect(404)
       .end(done);
   });
 });
