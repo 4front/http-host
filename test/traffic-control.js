@@ -155,7 +155,7 @@ describe('trafficControl()', function() {
 
     var mostRecentVersion = {versionId: shortid.generate()};
     _.extend(this.server.settings.database, {
-      mostRecentVersion: sinon.spy(function(appId, virtualEnv, cb) {
+      mostRecentVersion: sinon.spy(function(appId, cb) {
         cb(null, mostRecentVersion);
       }),
       updateTrafficRules: sinon.spy(function(appId, virtualEnv, trafficRules, cb) {
