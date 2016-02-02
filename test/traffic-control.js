@@ -171,7 +171,7 @@ describe('trafficControl()', function() {
       .expect(function(res) {
         assert.isTrue(self.server.settings.database.mostRecentVersion.calledWith(self.appId));
         assert.isTrue(self.server.settings.database.updateTrafficRules.calledWith(
-          self.appId, self.extendedRequest.virtualEnv, {production: [{versionId: mostRecentVersion.versionId, rule: '*'}]}));
+          self.appId, self.extendedRequest.virtualEnv, [{versionId: mostRecentVersion.versionId, rule: '*'}]));
       })
       .end(done);
   });
