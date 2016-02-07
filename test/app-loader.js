@@ -27,7 +27,11 @@ describe('virtualAppLoader()', function() {
     this.appId = shortid.generate();
     this.env = {};
 
-    this.server.settings.virtualHost = 'testapps.com';
+    _.extend(this.server.settings, {
+      virtualHost: 'testapps.com',
+      defaultVirtualEnvironment: 'production'
+    });
+
     this.appRegistry = this.server.settings.virtualAppRegistry = {
       getByName: sinon.spy(function(name, callback) {
         callback(null, {
@@ -102,56 +106,97 @@ describe('virtualAppLoader()', function() {
       self = this;
     });
 
-    it('should call findApp passing in a domain', function(done) {
-      var customDomain = {domain: 'www.custom-domain.com'};
-
-      this.appRegistry.getByDomain = sinon.spy(function(domain, callback) {
-        callback(null, {domain: customDomain});
+    it('find app with subdomain', function(done) {
+      var appId = shortid.generate();
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        callback(null, {appId: appId});
       });
 
       request(this.server)
         .get('/')
-        .set('Host', customDomain.domain)
+        .set('Host', 'www.custom-domain.com')
         .expect(200)
         .expect(function(res) {
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(customDomain.domain));
-          assert.deepEqual(res.body.virtualApp.domain, customDomain);
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('custom-domain.com', 'www'));
+          assert.equal('production', res.body.virtualEnv);
+          assert.equal(res.body.virtualApp.appId, appId);
+          assert.equal(res.body.virtualHost, 'www.custom-domain.com');
         })
         .end(done);
     });
 
-    it('should redirect custom domain with action of redirect', function(done) {
-      var customDomain = {domain: 'custom-domain.com', action: 'redirect'};
-      var appUrl = 'http://www.custom-domain.com';
-
-      this.appRegistry.getByDomain = sinon.spy(function(domain, callback) {
-        callback(null, {domain: customDomain, url: appUrl});
+    it('find app by apex domain', function(done) {
+      var appId = shortid.generate();
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        callback(null, {appId: appId});
       });
 
       request(this.server)
         .get('/')
-        .set('Host', customDomain.domain)
-        .expect(302)
+        .set('Host', 'apex.net')
+        .expect(200)
         .expect(function(res) {
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(customDomain.domain));
-          assert.equal(res.headers.location, appUrl);
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('apex.net', '@'));
+          assert.equal(res.body.virtualEnv, 'production');
+          assert.equal(res.body.virtualApp.appId, appId);
+          assert.equal(res.body.virtualHost, 'apex.net');
         })
         .end(done);
     });
 
-    it('recognizes custom domain with env in host', function(done) {
-      var host = 'www--test1.customdomain.com';
-      this.appRegistry.getByDomain = sinon.spy(function(domain, callback) {
-        callback(null, {domain: domain});
+    it('subdomain with virtual env', function(done) {
+      var appId = shortid.generate();
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        callback(null, {appId: appId});
       });
 
       request(this.server)
         .get('/')
-        .set('Host', host)
+        .set('Host', 'www--test1.customdomain.com')
         .expect(200)
         .expect(function(res) {
-          assert.isTrue(self.appRegistry.getByDomain.calledWith('www.customdomain.com'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', 'www'));
           assert.equal(res.body.virtualEnv, 'test1');
+          assert.equal(res.body.virtualHost, 'www.customdomain.com');
+        })
+        .end(done);
+    });
+
+    it('apex domain with virtual env', function(done) {
+      var appId = shortid.generate();
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        if (subDomain === '@') return callback(null, {appId: appId});
+        callback(null, null);
+      });
+
+      request(this.server)
+        .get('/')
+        .set('Host', 'test.customdomain.com')
+        .expect(200)
+        .expect(function(res) {
+          assert.equal(self.appRegistry.getByDomain.callCount, 2);
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', 'test'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', '@'));
+          assert.equal(res.body.virtualEnv, 'test');
+          assert.equal(res.body.virtualHost, 'customdomain.com');
+          assert.equal(res.body.virtualApp.appId, appId);
+        })
+        .end(done);
+    });
+
+    it('no custom domain match', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        callback(null, null);
+      });
+
+      request(this.server)
+        .get('/')
+        .set('Host', 'www.customdomain.com')
+        .expect(404)
+        .expect(function(res) {
+          assert.equal(self.appRegistry.getByDomain.callCount, 2);
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', 'www'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', '@'));
         })
         .end(done);
     });
@@ -189,42 +234,36 @@ describe('virtualAppLoader()', function() {
         .end(done);
     });
 
-    it('should redirect custom domains with certificates', function(done) {
-      var customDomain = {
-        domain: 'www.domain.net',
-        action: 'resolve',
-        certificate: 'asdfasdf'
-      };
-
-      this.appRegistry.getByDomain = function(name, callback) {
-        callback(null, {requireSsl: true, domain: customDomain});
-      };
+    it('should redirect custom domains when requireSsl is true', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        callback(null, {requireSsl: true});
+      });
 
       request(this.server)
         .get('/path')
-        .set('Host', customDomain.domain)
-        .expect('Cache-Control', 'no-cache')
+        .set('Host', 'domain.net')
         .expect(302)
+        .expect('Cache-Control', 'no-cache')
         .expect(function(res) {
-          assert.equal(res.headers.location, 'https://' + customDomain.domain + '/path');
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('domain.net', '@'));
+          assert.equal(res.headers.location, 'https://domain.net/path');
         })
         .end(done);
     });
 
-    it('does not redirect custom domains without a cert', function(done) {
-      var customDomain = {
-        domain: 'www.domain.net',
-        action: 'resolve'
-      };
-
-      this.appRegistry.getByDomain = function(name, callback) {
-        callback(null, {requireSsl: true, domain: customDomain});
+    it('does not redirect custom domains when requireSsl is false', function(done) {
+      this.appRegistry.getByDomain = function(domainName, subDomain, callback) {
+        callback(null, {requireSsl: false});
       };
 
       request(this.server)
         .get('/path')
-        .set('Host', customDomain.domain)
+        .set('Host', 'www.test.io')
         .expect(200)
+        .expect(function(res) {
+          assert.equal(res.body.virtualHost, 'www.test.io');
+          assert.equal(res.body.virtualEnv, 'production');
+        })
         .end(done);
     });
   });
