@@ -184,7 +184,7 @@ describe('virtualAppLoader()', function() {
         .end(done);
     });
 
-    it('no custom domain match', function(done) {
+    it('404 for request where there is no www and no apex', function(done) {
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
         callback(null, null);
       });
@@ -200,12 +200,50 @@ describe('virtualAppLoader()', function() {
         })
         .end(done);
     });
+
+    it('request for apex redirects to www', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        if (subDomain === '@') return callback(null, null);
+        callback(null, {url: 'https://www.customdomain.com'});
+      });
+
+      request(this.server)
+        .get('/blog')
+        .set('Host', 'customdomain.com')
+        .expect(302)
+        .expect(function(res) {
+          assert.equal(self.appRegistry.getByDomain.callCount, 2);
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', '@'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', 'www'));
+          assert.equal(res.headers.location, 'https://www.customdomain.com/blog');
+        })
+        .end(done);
+    });
+
+    it('request for www redirects to apex', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        if (subDomain === 'www') return callback(null, null);
+        callback(null, {url: 'https://customdomain.com'});
+      });
+
+      request(this.server)
+        .get('/blog')
+        .set('Host', 'www.customdomain.com')
+        .expect(302)
+        .expect(function(res) {
+          assert.equal(self.appRegistry.getByDomain.callCount, 2);
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', 'www'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', '@'));
+          assert.equal(res.headers.location, 'https://customdomain.com/blog');
+        })
+        .end(done);
+    });
   });
 
   describe('app with requireSsl set to true', function() {
     it('should redirect to https', function(done) {
       this.appRegistry.getByName = function(name, callback) {
-        callback(null, {requireSsl: true});
+        callback(null, {requireSsl: true, url: 'https://appname.testapps.com'});
       };
 
       request(this.server)
@@ -220,7 +258,7 @@ describe('virtualAppLoader()', function() {
 
     it('should redirect to https for root request', function(done) {
       this.appRegistry.getByName = function(name, callback) {
-        callback(null, {requireSsl: true});
+        callback(null, {requireSsl: true, url: 'https://appname.testapps.com'});
       };
 
       request(this.server)
@@ -236,7 +274,7 @@ describe('virtualAppLoader()', function() {
 
     it('should redirect custom domains when requireSsl is true', function(done) {
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
-        callback(null, {requireSsl: true});
+        callback(null, {requireSsl: true, url: 'https://domain.net'});
       });
 
       request(this.server)
