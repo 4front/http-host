@@ -25,7 +25,11 @@ describe('redirect plugin', function() {
     });
 
     server.use(function(err, req, res, next) {
-      res.status(500).json(Error.toJson(err));
+      if (!err.status) err.status = 500;
+      if (err.status === 500 && err.log !== false) {
+        process.stderr.write(err.stack);
+      }
+      res.status(err.status).json(Error.toJson(err));
     });
   });
 
@@ -122,4 +126,32 @@ describe('redirect plugin', function() {
         .end(done);
     });
   });
+
+  it('match querystring param', function(done) {
+    redirectOptions = {
+      'regex:/page.php\\?id=(:<id>[0-9]+)': '/articles/article${id}'
+    };
+
+    supertest(server)
+      .get('/page.php?id=1')
+      .expect(301)
+      .expect('Location', '/articles/article1')
+      .end(done);
+  });
+
+  it('querystring literal', function(done) {
+    redirectOptions = {
+      'regex:/page.php\\?id=5': '/articles/hello-world'
+    };
+
+    supertest(server)
+      .get('/page.php?id=5')
+      .expect(301)
+      .expect('Location', '/articles/hello-world')
+      .end(done);
+  });
+
+  // it('', function(done) {
+  //
+  // });
 });
