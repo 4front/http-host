@@ -405,6 +405,19 @@ describe('webPage', function() {
       .end(done);
   });
 
+  it('allows omitting the client config var', function(done) {
+    self.pageContent = '<html><head></head></html>';
+    this.options.omitClientConfigVar = true;
+
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect(function(res) {
+        assert.equal(res.text.indexOf('<script'), -1);
+      })
+      .end(done);
+  });
+
   it('extends htmlOptions from req.ext.htmlOptions', function(done) {
     this.extendedRequest.htmlOptions = {
       liveReload: true
