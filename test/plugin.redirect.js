@@ -80,17 +80,6 @@ describe('redirect plugin', function() {
       .end(done);
   });
 
-  it('causes error for invalid rule array', function(done) {
-    redirectOptions = {
-      '/help/:pageTitle': [305, '/support/:pageTitle']
-    };
-
-    supertest(server)
-      .get('/help/how-to')
-      .expect(500)
-      .end(done);
-  });
-
   it('skips middleware if no matches', function(done) {
     redirectOptions = {
       '/blog/post-1': '/blog/new-post1',
