@@ -90,7 +90,8 @@ describe('staticAsset', function() {
 
   it('serves static asset with max-age', function(done) {
     var filePath = 'data/ok.txt';
-    var url = this.server.settings.deployedAssetsPath + '/' + this.appId + '/' + this.versionId + '/' + filePath;
+    var url = urljoin(this.server.settings.deployedAssetsPath, this.appId,
+      this.versionId, filePath);
     supertest(this.server)
       .get(url)
       .expect(200)
@@ -99,21 +100,9 @@ describe('staticAsset', function() {
       .expect(function(res) {
         assert.equal(res.text, self.responseText);
         assert.isFalse(res.headers.etag || false);
-        assert.isTrue(self.storage.readFileStream.calledWith(urljoin(self.appId, self.versionId, filePath)));
+        assert.isTrue(self.storage.readFileStream.calledWith(
+          urljoin(self.appId, self.versionId, filePath)));
       })
-      .end(done);
-  });
-
-  it('returns Content-Encoding header for gzipped assets', function(done) {
-    this.storage.readFileStream = function() {
-      return streamTestUtils.emitter('metadata', {contentEncoding: 'gzip'});
-    };
-
-    supertest(this.server)
-      .get('/gzipped.txt')
-      .expect(200)
-      .expect('Content-Type', 'text/plain')
-      .expect('Content-Encoding', 'gzip')
       .end(done);
   });
 
@@ -234,7 +223,7 @@ describe('staticAsset', function() {
 
   it('redirects request to localhost for dev sandbox', function(done) {
     this.extendedRequest.virtualEnv = 'local';
-    this.extendedRequest.devOptions = { port: 9999 };
+    this.extendedRequest.devOptions = {port: 9999};
 
     supertest(this.server)
       .get('/images/photo.png')
