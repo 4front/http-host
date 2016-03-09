@@ -44,7 +44,7 @@
     "expand-var": "^0.1.3",
     "express-session": "^1.12.1",
     "get-parameter-names": "^0.2.0",
-    "htmlprep": "^1.2.4",
+    "htmlprep": "^1.2.5",
     "jwt-simple": "^0.4.0",
     "lodash": "^3.10.1",
     "mime": "^1.3.4",
