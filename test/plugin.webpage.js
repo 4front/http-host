@@ -175,7 +175,7 @@ describe('webPage', function() {
       };
 
       this.server.settings.storage.fileExists = sinon.spy(function(filePath, cb) {
-        cb(null, _.contains(self.existingFiles, filePath));
+        cb(null, _.includes(self.existingFiles, filePath));
       });
     });
 
