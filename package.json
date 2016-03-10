@@ -4,11 +4,10 @@
   "description": "Core 4front http hosting functionality",
   "main": "index.js",
   "scripts": {
-    "lint": "node_modules/.bin/eslint --config .eslintrc .; exit 0",
+    "lint": "eslint --cache ./lib index.js",
     "test": "mocha --reporter spec --bail --check-leaks test/",
     "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks test/",
-    "test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --reporter spec --check-leaks test/",
-    "lint": "eslint --cache ./lib index.js"
+    "test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --reporter spec --check-leaks test/"
   },
   "repository": {
     "type": "git",
@@ -45,7 +44,7 @@
     "expand-var": "^0.1.3",
     "express-session": "^1.12.1",
     "get-parameter-names": "^0.2.0",
-    "htmlprep": "^1.2.5",
+    "htmlprep": "^1.2.6",
     "jwt-simple": "^0.4.0",
     "lodash": "^4.6.1",
     "mime": "^1.3.4",
