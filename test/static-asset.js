@@ -8,6 +8,7 @@ var async = require('async');
 var express = require('express');
 var supertest = require('supertest');
 var shortid = require('shortid');
+var testUtil = require('./test-util');
 var streamTestUtils = require('./stream-test-utils');
 var staticAsset = require('../lib/middleware/static-asset');
 
@@ -30,12 +31,16 @@ describe('staticAsset', function() {
         });
 
         return stream;
+      }),
+      getMetadata: sinon.spy(function(filePath, callback) {
+        callback(null, self.metadata);
       })
     };
 
     _.extend(this.server.settings, {
       staticAssetMaxAge: 500000,
-      deployedAssetsPath: '/deployments'
+      deployedAssetsPath: '/deployments',
+      baseUrlPlaceholder: 'https://__baseurl__'
     });
 
     this.appId = shortid.generate();
@@ -60,10 +65,7 @@ describe('staticAsset', function() {
       res.status(404).send('not found');
     });
 
-    this.server.use(function(err, req, res, next) {
-      if (!err.status) err.status = 500;
-      res.status(err.status).end();
-    });
+    this.server.use(testUtil.errorHandler);
   });
 
   describe('skips plugin', function() {
@@ -130,7 +132,7 @@ describe('staticAsset', function() {
 
   it('returns 500 when storage throws error', function(done) {
     this.storage.readFileStream = function() {
-      return streamTestUtils.emitter('readError', new Error('some error'));
+      return streamTestUtils.emitter('readError', Error.create('some error', {log: false}));
     };
 
     async.series([
@@ -248,24 +250,25 @@ describe('staticAsset', function() {
       .end(done);
   });
 
-  it('returns gzipped sitemap.xml', function(done) {
-    var contents = '<sitemap></sitemap>';
+  it('returns gzipped json file', function(done) {
+    var contents = '{"hello": "world"}';
 
+    this.metadata = {contentEncoding: 'gzip'};
     this.storage.readFileStream = sinon.spy(function() {
       return streamTestUtils.buffer(zlib.gzipSync(contents), {
-        metadata: {contentEncoding: 'gzip'}
+        metadata: self.metadata
       });
     });
 
     supertest(this.server)
-      .get('/sitemap.xml')
-      .expect('Content-Type', 'application/xml')
+      .get('/hello.json')
+      .expect('Content-Type', 'application/json')
       .expect('Content-Encoding', 'gzip')
       .expect('Cache-Control', 'no-cache')
       .expect('ETag', this.versionId)
       .expect(200)
       .expect(function(res) {
-        assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/sitemap.xml'));
+        assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/hello.json'));
         assert.equal(res.text, contents);
       })
       .end(done);
@@ -296,13 +299,10 @@ describe('staticAsset', function() {
   it('gunzips encoded content when accepts header missing gzip', function(done) {
     var spec = {swagger: 'spec'};
 
-    this.storage.getMetadata = sinon.spy(function(filePath, callback) {
-      callback(null, {contentEncoding: 'gzip'});
-    });
-
+    this.metadata = {contentEncoding: 'gzip'};
     this.storage.readFileStream = sinon.spy(function() {
       return streamTestUtils.buffer(zlib.gzipSync(JSON.stringify(spec)), {
-        metadata: {contentEncoding: 'gzip'}
+        metadata: self.metadata
       });
     });
 
@@ -313,6 +313,7 @@ describe('staticAsset', function() {
       .expect('Vary', 'Accept-Encoding')
       .expect('Content-Type', /application\/json/)
       .expect(function(res) {
+        assert.isTrue(self.storage.getMetadata.called);
         assert.isTrue(self.storage.getMetadata.calledWith(self.appId + '/' + self.versionId + '/swagger.json'));
         assert.deepEqual(res.body, spec);
         assert.isTrue(_.isEmpty(res.headers['content-encoding']));
@@ -324,6 +325,33 @@ describe('staticAsset', function() {
     supertest(this.server)
       .get('/package.json')
       .expect(404)
+      .end(done);
+  });
+
+  it('updates __baseurl__ in xml files like sitemaps and rss feeds', function(done) {
+    var contents = '<sitemap>' +
+      '\n\t<url>' +
+      '\n\t\t<loc>https://__baseurl__/about/us</loc></sitemap>' +
+      '\n\t</url>' +
+      '\n</sitemap>';
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(contents);
+    });
+
+    supertest(this.server)
+      .get('/sitemap.xml')
+      .expect('Content-Type', 'application/xml')
+      .expect(200)
+      .expect(function(res) {
+        var expected = '<sitemap>' +
+          '\n\t<url>' +
+          '\n\t\t<loc>http://127.0.0.1/about/us</loc></sitemap>' +
+          '\n\t</url>' +
+          '\n</sitemap>';
+
+        assert.equal(res.text.trim(), expected);
+      })
       .end(done);
   });
 });

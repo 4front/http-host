@@ -34,6 +34,7 @@
     "async": "^1.5.1",
     "basic-auth": "^1.0.3",
     "body-parser": "^1.14.2",
+    "byline": "^4.2.1",
     "compressible": "^2.0.6",
     "compression": "^1.6.0",
     "connect": "^3.4.0",
