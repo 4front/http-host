@@ -289,6 +289,29 @@ describe('virtualAppLoader()', function() {
         .end(done);
     });
 
+    it('should redirect staging custom domain to https', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        if (subDomain === '@') {
+          callback(null, {requireSsl: true, urls: {
+            production: 'https://domain.net',
+            test: 'https://test.domain.net'
+          }});
+        } else {
+          callback(null, null);
+        }
+      });
+
+      request(this.server)
+        .get('/path')
+        .set('Host', 'test.domain.net')
+        .expect(302)
+        .expect('Cache-Control', 'no-cache')
+        .expect(function(res) {
+          assert.equal(res.headers.location, 'https://test.domain.net/path');
+        })
+        .end(done);
+    });
+
     it('does not redirect custom domains when requireSsl is false', function(done) {
       this.appRegistry.getByDomain = function(domainName, subDomain, callback) {
         callback(null, {requireSsl: false});
