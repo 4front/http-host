@@ -51,6 +51,7 @@
     "named-regexp": "^0.1.1",
     "on-finished": "^2.3.0",
     "path-to-regexp": "^1.2.1",
+    "prerender-node": "github:4front/prerender-node",
     "psl": "^1.1.9",
     "serve-favicon": "^2.3.0",
     "sha1": "^1.1.1",
