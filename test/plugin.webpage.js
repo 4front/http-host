@@ -6,9 +6,11 @@ var express = require('express');
 var shortid = require('shortid');
 var supertest = require('supertest');
 var urljoin = require('url-join');
+var onHeaders = require('on-headers');
 var streamTestUtils = require('./stream-test-utils');
 var testUtil = require('./test-util');
 var webPage = require('../lib/plugins/webpage');
+var debug = require('debug')('4front:test');
 
 require('dash-assert');
 
@@ -22,7 +24,7 @@ describe('webPage', function() {
     this.server = express();
 
     this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
-    this.server.settings.storage = {
+    this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
         return streamTestUtils.buffer(self.pageContent);
       })
@@ -45,6 +47,9 @@ describe('webPage', function() {
 
     this.server.use(function(req, res, next) {
       req.ext = self.extendedRequest;
+      onHeaders(res, function() {
+        debug('headers about to be set');
+      });
       next();
     });
 
@@ -222,21 +227,75 @@ describe('webPage', function() {
         .end(done);
     });
 
-    it('does not search for alternates for root request', function(done) {
-      supertest(this.server)
-        .get('/')
-        .expect(404)
-        .expect(function(res) {
-          assert.isFalse(self.server.settings.storage.fileExists.called);
-        })
-        .end(done);
-    });
-
     it('returns 404 if no alternates found', function(done) {
       supertest(this.server)
         .get('/')
         .expect(404)
         .expect('Error-Code', 'pageNotFound')
+        .end(done);
+    });
+  });
+
+  describe('fallback pages', function() {
+    beforeEach(function() {
+      self = this;
+      this.existingFiles = [];
+
+      _.assign(this.storage, {
+        getMetadata: function(filePath, cb) {
+          cb(null, {});
+        },
+        fileExists: sinon.spy(function(filePath, cb) {
+          cb(null, _.includes(self.existingFiles, filePath));
+        }),
+        readFileStream: sinon.spy(function(filePath) {
+          if (_.endsWith(filePath, 'index.xml')) {
+            return streamTestUtils.buffer('<xml/>');
+          } else if (_.endsWith(filePath, 'index.json')) {
+            return streamTestUtils.buffer('{}');
+          }
+          return streamTestUtils.emitter('missing');
+        })
+      });
+    });
+
+    it('renders fallback index.xml page', function(done) {
+      this.existingFiles.push(this.appId + '/' + this.versionId + '/index.xml');
+      supertest(this.server)
+        .get('/')
+        .expect(200)
+        .expect('Content-Type', 'application/xml')
+        .expect(function(res) {
+          assert.equal(self.storage.readFileStream.callCount, 2);
+          assert.isTrue(self.storage.readFileStream.calledWith(
+            self.appId + '/' + self.versionId + '/index.html'));
+          assert.isTrue(self.storage.readFileStream.calledWith(
+            self.appId + '/' + self.versionId + '/index.xml'));
+          assert.isTrue(self.storage.fileExists.calledWith(
+            self.appId + '/' + self.versionId + '/index.xml'));
+        })
+        .end(done);
+    });
+
+    it('renders fallback index.json page', function(done) {
+      this.existingFiles.push(this.appId + '/' + this.versionId + '/blog/index.json');
+      supertest(this.server)
+        .get('/blog/')
+        .expect(200)
+        .expect('Content-Type', 'application/json')
+        .expect(function(res) {
+          assert.isTrue(self.storage.fileExists.calledWith(
+            self.appId + '/' + self.versionId + '/blog/index.xml'));
+          assert.isTrue(self.storage.fileExists.calledWith(
+            self.appId + '/' + self.versionId + '/blog/index.json'));
+          assert.equal(self.storage.readFileStream.callCount, 2);
+          assert.isTrue(self.storage.readFileStream.calledWith(
+            self.appId + '/' + self.versionId + '/blog/index.html'));
+          assert.isFalse(self.storage.readFileStream.calledWith(
+            self.appId + '/' + self.versionId + '/blog/index.xml'));
+          assert.isTrue(self.storage.readFileStream.calledWith(
+            self.appId + '/' + self.versionId + '/blog/index.json'));
+        })
         .end(done);
     });
   });

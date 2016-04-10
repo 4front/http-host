@@ -59,7 +59,9 @@ describe('staticAsset', function() {
 
     this.server.use(compression());
     this.server.get(this.server.settings.deployedAssetsPath + '/:appId/:versionId/*', staticAsset(this.server.settings));
-    this.server.get('/*', staticAsset(this.server.settings));
+    this.server.get('/*', function(req, res, next) {
+      staticAsset(self.server.settings)(req, res, next);
+    });
 
     this.server.use(function(req, res, next) {
       res.status(404).send('not found');
@@ -184,7 +186,12 @@ describe('staticAsset', function() {
       function(cb) {
         self.storage.readFileStream.reset();
         var newVersionId = shortid.generate();
-        self.extendedRequest.virtualAppVersion.versionId = newVersionId;
+        self.extendedRequest = {
+          virtualEnv: 'production',
+          virtualApp: {appId: self.appId},
+          virtualAppVersion: {versionId: newVersionId}
+        };
+
         supertest(self.server)
           .get('/' + filePath)
           .set('If-None-Match', initialETag)

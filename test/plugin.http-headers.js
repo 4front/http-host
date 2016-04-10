@@ -42,7 +42,7 @@ describe('httpHeaders', function() {
       httpHeaders(self.headers)(req, res, next);
     });
 
-    this.server.get('/*', staticAsset(this.server.settings));
+    this.server.get('/*', staticAsset());
 
     this.server.use(function(req, res, next) {
       res.status(404).send('not found');
