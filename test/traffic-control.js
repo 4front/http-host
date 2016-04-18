@@ -114,7 +114,7 @@ describe('trafficControl()', function() {
     request(this.server)
       .get('/')
       .expect(404)
-      .expect('Error-Code', 'noDeployedVersion')
+      .expect('Error-Code', 'noVersionConfigured')
       .end(done);
   });
 
@@ -157,9 +157,6 @@ describe('trafficControl()', function() {
     _.extend(this.server.settings.database, {
       mostRecentVersion: sinon.spy(function(appId, cb) {
         cb(null, mostRecentVersion);
-      }),
-      updateTrafficRules: sinon.spy(function(appId, virtualEnv, trafficRules, cb) {
-        cb();
       })
     });
 
@@ -170,8 +167,6 @@ describe('trafficControl()', function() {
       .expect('Virtual-App-Version-Method', 'trafficRules')
       .expect(function(res) {
         assert.isTrue(self.server.settings.database.mostRecentVersion.calledWith(self.appId));
-        assert.isTrue(self.server.settings.database.updateTrafficRules.calledWith(
-          self.appId, self.extendedRequest.virtualEnv, [{versionId: mostRecentVersion.versionId, rule: '*'}]));
       })
       .end(done);
   });

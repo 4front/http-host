@@ -328,19 +328,16 @@ describe('webPage', function() {
       self.pageContent = '<html><head></head><body><script src="js/main.js"></script></html>';
 
       this.options.htmlprep = true;
-      this.extendedRequest.virtualAppVersion = {
-        versionId: '123'
-      };
     });
 
     it('rewrites asset URLs for CDN', function(done) {
-      var appId = self.extendedRequest.virtualApp.appId;
-
       supertest(this.server)
         .get('/')
         .expect(200)
         .expect(function(res) {
-          var scriptUrl = '//' + urljoin(self.server.settings.deployedAssetsPath, appId, '/123/js/main.js');
+          var scriptUrl = '//' + urljoin(self.server.settings.deployedAssetsPath,
+            self.appId, self.versionId, '/js/main.js');
+
           assert.ok(res.text.indexOf(scriptUrl) !== -1);
         })
         .end(done);
@@ -353,7 +350,7 @@ describe('webPage', function() {
         .get('/')
         .expect(200)
         .expect(function(res) {
-          var scriptUrl = '/static/' + self.extendedRequest.virtualApp.appId + '/123/js/main.js';
+          var scriptUrl = '/static/' + self.appId + '/' + self.versionId + '/js/main.js';
           assert.ok(res.text.indexOf(scriptUrl) !== -1);
         })
         .end(done);
@@ -366,7 +363,7 @@ describe('webPage', function() {
         .expect(200)
         .expect(function(res) {
           var expectedPath = urljoin(self.server.settings.deployedAssetsPath,
-            self.extendedRequest.virtualApp.appId, '123/blog/../img/photo.jpg');
+            self.appId, self.versionId, 'img/photo.jpg');
           assert.equal(res.text, '<html><img src="//' + expectedPath + '"/></html>');
         })
         .end(done);

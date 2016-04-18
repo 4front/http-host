@@ -8,6 +8,7 @@ var shortid = require('shortid');
 var request = require('supertest');
 var _ = require('lodash');
 var debug = require('debug');
+var testUtil = require('./test-util');
 
 require('dash-assert');
 
@@ -48,15 +49,7 @@ describe('virtualAppLoader()', function() {
       res.json(_.pick(req.ext, 'virtualEnv', 'virtualApp', 'virtualHost', 'clientConfig', 'env'));
     });
 
-    this.server.use(function(err, req, res, next) {
-      res.statusCode = err.status || 500;
-      if (res.statusCode === 500) {
-        console.log(err.stack);
-        res.end(err.stack);
-      } else {
-        res.end();
-      }
-    });
+    this.server.use(testUtil.errorHandler);
   });
 
   describe('virtual env in host', function() {
@@ -159,6 +152,20 @@ describe('virtualAppLoader()', function() {
           assert.equal(res.body.virtualEnv, 'test1');
           assert.equal(res.body.virtualHost, 'www.customdomain.com');
         })
+        .end(done);
+    });
+
+    it('returns 404 for invalid environment', function(done) {
+      var appId = shortid.generate();
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        callback(null, {appId: appId, environments: ['production', 'staging']});
+      });
+
+      request(this.server)
+        .get('/')
+        .set('Host', 'www--test.customdomain.com')
+        .expect(404)
+        .expect('Error-Code', 'invalidVirtualEnv')
         .end(done);
     });
 
