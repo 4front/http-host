@@ -54,7 +54,7 @@ describe('pipeResponse', function() {
       .get('/')
       .expect(200)
       .expect(function(res) {
-        var expectedCssPath = '//' + self.server.settings.deployedAssetsPath + '/' + self.appId + '/' + self.versionId + '/../css/main.css';
+        var expectedCssPath = '//' + self.server.settings.deployedAssetsPath + '/' + self.appId + '/' + self.versionId + '/css/main.css';
         assert.isTrue(res.text.indexOf(expectedCssPath) > 0);
       })
       .end(done);
