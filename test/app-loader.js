@@ -30,7 +30,12 @@ describe('virtualAppLoader()', function() {
 
     _.extend(this.server.settings, {
       virtualHost: 'testapps.com',
-      defaultVirtualEnvironment: 'production'
+      defaultVirtualEnvironment: 'production',
+      database: {
+        getDomain: sinon.spy(function(domainName, callback) {
+          callback(null, {domainName: domainName});
+        })
+      }
     });
 
     this.appRegistry = this.server.settings.virtualAppRegistry = {
@@ -382,6 +387,70 @@ describe('virtualAppLoader()', function() {
             key1: 'global_key1',
             key2: 'production_key2'
           });
+        })
+        .end(done);
+    });
+  });
+
+  describe('custom domain catch-all redirect', function() {
+    beforeEach(function() {
+      self = this;
+      // App not found
+      this.appRegistry.getByDomain = function(domainName, subDomain, callback) {
+        callback(null, null);
+      };
+
+      this.server.settings.database.getDomain = sinon.spy(function(domainName, callback) {
+        callback(null, {
+          domainName: domainName,
+          catchAllRedirect: self.catchAllRedirect
+        });
+      });
+    });
+
+    it('redirects preserving path and query', function(done) {
+      this.catchAllRedirect = 'https://somewhere.com';
+      request(this.server)
+        .get('/path?id=1')
+        .set('Host', 'appname.customdomain.com')
+        .expect(302)
+        .expect(function(res) {
+          assert.isTrue(self.server.settings.database.getDomain.calledWith('customdomain.com'));
+          assert.equal(res.headers.location, 'https://somewhere.com/path?id=1');
+        })
+        .end(done);
+    });
+
+    it('returns 404 if no catch-all redirect specified', function(done) {
+      this.catchAllRedirect = null;
+      request(this.server)
+        .get('/')
+        .set('Host', 'appname.customdomain.com')
+        .expect(404)
+        .end(done);
+    });
+
+    it('returns 404 if domain not found', function(done) {
+      this.server.settings.database.getDomain = function(domainName, callback) {
+        callback(null, null);
+      };
+
+      request(this.server)
+        .get('/')
+        .set('Host', 'appname.customdomain.com')
+        .expect(404)
+        .end(done);
+    });
+
+    it('does not preserve path and query if catchAllRedirect already has path', function(done) {
+      this.catchAllRedirect = 'https://somewhere.com/404';
+      request(this.server)
+        .get('/path?id=1')
+        .set('Host', 'appname.customdomain.com')
+        .expect(302)
+        .expect(function(res) {
+          assert.isTrue(self.server.settings.database.getDomain.calledWith('customdomain.com'));
+          assert.equal(res.headers.location, 'https://somewhere.com/404');
         })
         .end(done);
     });
