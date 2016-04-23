@@ -38,13 +38,14 @@ describe('virtualAppLoader()', function() {
       }
     });
 
+    this.virtualApp = {
+      appId: self.appId,
+      env: self.env
+    };
+
     this.appRegistry = this.server.settings.virtualAppRegistry = {
       getByName: sinon.spy(function(name, callback) {
-        callback(null, {
-          appId: self.appId,
-          name: name,
-          env: self.env
-        });
+        callback(null, _.assign({}, self.virtualApp, {name: name}));
       })
     };
 
@@ -169,6 +170,23 @@ describe('virtualAppLoader()', function() {
       request(this.server)
         .get('/')
         .set('Host', 'www--test.customdomain.com')
+        .expect(404)
+        .expect('Error-Code', 'invalidVirtualEnv')
+        .end(done);
+    });
+
+    it('return 404 for invalid environment for apex domain', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        if (subDomain === 'test') {
+          callback(null, null);
+        } else {
+          callback(null, _.assign(self.virtualApp, {environments: ['production', 'staging']}));
+        }
+      });
+
+      request(this.server)
+        .get('/')
+        .set('Host', 'test.customdomain.com')
         .expect(404)
         .expect('Error-Code', 'invalidVirtualEnv')
         .end(done);
@@ -451,6 +469,25 @@ describe('virtualAppLoader()', function() {
         .expect(function(res) {
           assert.isTrue(self.server.settings.database.getDomain.calledWith('customdomain.com'));
           assert.equal(res.headers.location, 'https://somewhere.com/404');
+        })
+        .end(done);
+    });
+
+    it('catch all redirect to apex domain', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        callback(null, _.assign(self.virtualApp, {environments: ['test']}));
+      });
+
+      this.catchAllRedirect = 'https://somewhere.com';
+
+      request(this.server)
+        .get('/')
+        .set('Host', 'appname.customdomain.com')
+        .expect(302)
+        .expect(function(res) {
+          assert.isTrue(self.appRegistry.getByDomain.calledWith('customdomain.com', 'appname'));
+          // assert.isTrue(self.server.settings.database.getDomain.calledWith('customdomain.com'));
+          assert.equal(res.headers.location, 'https://somewhere.com');
         })
         .end(done);
     });
