@@ -361,4 +361,24 @@ describe('staticAsset', function() {
       })
       .end(done);
   });
+
+  it('updates __baseurl__ in json files', function(done) {
+    var contents = JSON.stringify({
+      url: 'https://__baseurl__/descriptor.json'
+    });
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(contents);
+    });
+
+    supertest(this.server)
+      .get('/descriptor.json')
+      .expect('Content-Type', 'application/json')
+      .expect(200)
+      .expect(function(res) {
+        assert.deepEqual(JSON.parse(res.text.trim()),
+        {url: 'http://127.0.0.1/descriptor.json'});
+      })
+      .end(done);
+  });
 });
