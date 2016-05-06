@@ -362,6 +362,24 @@ describe('staticAsset', function() {
       .end(done);
   });
 
+  it('handles double slashes in baseurl', function(done) {
+    var contents = '<xml>https://__baseurl__//foo</xml>';
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(contents);
+    });
+
+    supertest(this.server)
+      .get('/sitemap.xml')
+      .expect('Content-Type', 'application/xml')
+      .expect(200)
+      .expect(function(res) {
+        var expected = '<xml>http://127.0.0.1/foo</xml>';
+        assert.equal(res.text.trim(), expected);
+      })
+      .end(done);
+  });
+
   it('updates __baseurl__ in json files', function(done) {
     var contents = JSON.stringify({
       url: 'https://__baseurl__/descriptor.json'
