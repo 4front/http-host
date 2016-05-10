@@ -545,7 +545,7 @@ describe('webPage', function() {
 
   describe('caching', function() {
     beforeEach(function() {
-      self.extendedRequest.enableContentCache = true;
+      self.server.enableContentCache = function() { return true;};
     });
 
     it('caches get requests', function(done) {
