@@ -43,7 +43,7 @@
     "expand-var": "^0.1.3",
     "express-session": "^1.13.0",
     "get-parameter-names": "^0.3.0",
-    "htmlprep": "^1.6.4",
+    "htmlprep": "^1.6.5",
     "jwt-simple": "^0.5.0",
     "lodash": "^4.9.0",
     "mime": "^1.3.4",
