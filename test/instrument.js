@@ -26,13 +26,13 @@ describe('instrument', function() {
     this.app.use(this.instrument.init(this.settings));
 
     // Some fake middleware that registers with profiler
-    this.app.use(this.instrument(function(req, res, next) {
+    this.app.use(this.instrument.middleware(function(req, res, next) {
       setTimeout(function() {
         next();
       }, 50);
     }, 'timeout-middleware'));
 
-    this.app.get('/', this.instrument(function(req, res, next) {
+    this.app.get('/', this.instrument.middleware(function(req, res, next) {
       res.send('ok');
     }, 'index-handler'));
   });

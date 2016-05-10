@@ -7,6 +7,7 @@ var shortid = require('shortid');
 var supertest = require('supertest');
 var urljoin = require('url-join');
 var onHeaders = require('on-headers');
+var memoryCache = require('memory-cache-stream');
 var streamTestUtils = require('./stream-test-utils');
 var testUtil = require('./test-util');
 var webPage = require('../lib/plugins/webpage');
@@ -24,6 +25,8 @@ describe('webPage', function() {
     this.server = express();
 
     this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
+    this.contentCache = this.server.settings.contentCache = memoryCache();
+
     this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
         return streamTestUtils.buffer(self.pageContent);
@@ -538,6 +541,80 @@ describe('webPage', function() {
           .end(cb);
       }
     ], done);
+  });
+
+  describe('caching', function() {
+    beforeEach(function() {
+      self.extendedRequest.enableContentCache = true;
+    });
+
+    it('caches get requests', function(done) {
+      var etagHeader;
+      var htmlResponse;
+
+      async.series([
+        function(cb) {
+          supertest(self.server)
+            .get('/')
+            .expect(200)
+            .expect('content-type', /^text\/html/)
+            .expect(function(res) {
+              assert.isTrue(self.server.settings.storage.readFileStream.called);
+              assert.ok(res.headers.etag);
+              etagHeader = res.headers.etag;
+              htmlResponse = res.text;
+            })
+            .end(cb);
+        },
+        function(cb) {
+          self.contentCache.get(etagHeader, function(err, content) {
+            if (err) return cb(err);
+            assert.equal(content, htmlResponse);
+            cb();
+          });
+        },
+        function(cb) {
+          // Make another request. This time the response should come
+          // from the cache and the storage should have have been touched.
+          self.server.settings.storage.readFileStream.reset();
+          supertest(self.server)
+            .get('/')
+            .expect(200)
+            .expect(htmlResponse)
+            .expect(function(res) {
+              assert.isFalse(self.server.settings.storage.readFileStream.called);
+            })
+            .end(cb);
+        },
+        function(cb) {
+          self.server.settings.storage.readFileStream.reset();
+          // Change the versionId which should result in a different etag.
+          self.extendedRequest.virtualAppVersion.versionId = shortid.generate();
+
+          supertest(self.server)
+            .get('/')
+            .expect(200)
+            .expect(function(res) {
+              assert.isTrue(self.server.settings.storage.readFileStream.called);
+              assert.ok(res.headers.etag);
+              assert.notEqual(res.headers.etag, etagHeader);
+              assert.notEqual(res.text, htmlResponse);
+              etagHeader = res.headers.etag;
+              htmlResponse = res.text;
+            })
+            .end(cb);
+        },
+        function(cb) {
+          // Check one last time that the html response is in the cache
+          // under the new cache key.
+          self.contentCache.get(etagHeader, function(err, content) {
+            if (err) return cb(err);
+            assert.equal(content, htmlResponse);
+            cb();
+          });
+        }
+      ], done);
+    });
   });
 });
 

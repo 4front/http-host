@@ -3,6 +3,7 @@ var _ = require('lodash');
 var express = require('express');
 var shortid = require('shortid');
 var assert = require('assert');
+var memoryCache = require('memory-cache-stream');
 var testUtil = require('./test-util');
 var streamTestUtils = require('./stream-test-utils');
 var pipeResponse = require('../lib/middleware/pipe-response');
@@ -17,7 +18,8 @@ describe('pipeResponse', function() {
     this.server = express();
 
     _.extend(this.server.settings, {
-      deployedAssetsPath: 'cdnhost.com'
+      deployedAssetsPath: 'cdnhost.com',
+      contentCache: memoryCache()
     });
 
     this.options = {};
