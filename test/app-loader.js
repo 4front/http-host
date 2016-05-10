@@ -253,7 +253,10 @@ describe('virtualAppLoader()', function() {
     it('request for www redirects to apex', function(done) {
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
         if (subDomain === 'www') return callback(null, null);
-        callback(null, {url: 'https://customdomain.com'});
+        callback(null, {
+          url: 'https://customdomain.com',
+          environments: ['dev', 'production']
+        });
       });
 
       request(this.server)
