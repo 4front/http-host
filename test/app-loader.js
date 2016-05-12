@@ -298,7 +298,6 @@ describe('virtualAppLoader()', function() {
         .get('/')
         .set('Host', 'appname.testapps.com')
         .expect(302)
-        .expect('Cache-Control', 'no-cache')
         .expect(function(res) {
           assert.equal(res.headers.location, 'https://appname.testapps.com');
         })
@@ -314,7 +313,6 @@ describe('virtualAppLoader()', function() {
         .get('/path')
         .set('Host', 'domain.net')
         .expect(302)
-        .expect('Cache-Control', 'no-cache')
         .expect(function(res) {
           assert.isTrue(self.appRegistry.getByDomain.calledWith('domain.net', '@'));
           assert.equal(res.headers.location, 'https://domain.net/path');
@@ -338,7 +336,6 @@ describe('virtualAppLoader()', function() {
         .get('/path')
         .set('Host', 'test.domain.net')
         .expect(302)
-        .expect('Cache-Control', 'no-cache')
         .expect(function(res) {
           assert.equal(res.headers.location, 'https://test.domain.net/path');
         })

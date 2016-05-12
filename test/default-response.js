@@ -37,7 +37,6 @@ describe('defaultResponse()', function() {
     request(this.server).get('/favicon.ico')
       .expect(200)
       .expect('Content-Type', 'image/x-icon')
-      .expect('ETag', self.versionId)
       .end(done);
   });
 
@@ -45,7 +44,6 @@ describe('defaultResponse()', function() {
     request(this.server).get('/robots.txt')
       .expect(200)
       .expect('Content-Type', 'text/plain')
-      .expect('ETag', self.versionId)
       .end(done);
   });
 
