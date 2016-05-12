@@ -377,6 +377,10 @@ describe('cache', function() {
     done();
   });
 
+  it('different accepts headers use different cached responses', function(done) {
+    done();
+  });
+
   function getCacheKeyFromHeader(res) {
     return res.get('x-4front-server-cache').split(' ')[1];
   }

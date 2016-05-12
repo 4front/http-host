@@ -15,6 +15,8 @@ var debug = require('debug')('4front:test');
 require('dash-assert');
 
 var self;
+var headerPrefix = 'x-4front-';
+
 describe('webPage', function() {
   beforeEach(function() {
     self = this;
@@ -23,8 +25,13 @@ describe('webPage', function() {
 
     this.server = express();
 
-    this.server.settings.deployedAssetsPath = 'assethost.com/deployments';
-    this.contentCache = this.server.settings.contentCache = memoryCache();
+    _.assign(this.server.settings, {
+      deployedAssetsPath: 'assethost.com/deployments',
+      customHttpHeaderPrefix: 'x-4front-',
+      contentCache: memoryCache()
+    });
+
+    this.contentCache = this.server.settings.contentCache;
 
     this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
@@ -84,7 +91,7 @@ describe('webPage', function() {
       supertest(this.server)
         .get('/docs/getting-started?fake=1')
         .expect(200)
-        .expect('Virtual-App-Page', 'docs/getting-started.html')
+        .expect(headerPrefix + 'page-path', 'docs/getting-started.html')
         .expect(function(res) {
           assert.ok(self.server.settings.storage.readFileStream.calledWith(
             urljoin(self.extendedRequest.virtualApp.appId,
@@ -98,7 +105,7 @@ describe('webPage', function() {
       supertest(this.server)
         .get('/?foo=1&blah=5')
         .expect(200)
-        .expect('Virtual-App-Page', 'index.html')
+        .expect(headerPrefix + 'page-path', 'index.html')
         .expect(function(res) {
           assert.ok(self.server.settings.storage.readFileStream.calledWith(
             urljoin(self.extendedRequest.virtualApp.appId,
@@ -112,7 +119,7 @@ describe('webPage', function() {
       supertest(this.server)
         .get('/docs/')
         .expect(200)
-        .expect('Virtual-App-Page', 'docs/index.html')
+        .expect(headerPrefix + 'page-path', 'docs/index.html')
         .expect(function(res) {
           assert.ok(self.server.settings.storage.readFileStream.calledWith(
             urljoin(self.extendedRequest.virtualApp.appId,
@@ -137,7 +144,7 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect('Content-Type', /^text\/html/)
-      .expect('Virtual-App-Version', this.extendedRequest.virtualAppVersion.versionId)
+      .expect(headerPrefix + 'version-id', this.extendedRequest.virtualAppVersion.versionId)
       .expect(/\<title\>test page\<\/title\>/)
       .end(done);
   });
@@ -170,7 +177,7 @@ describe('webPage', function() {
     supertest(this.server)
       .get('/')
       .expect(200)
-      .expect('Virtual-App-Version', this.extendedRequest.virtualAppVersion.versionId)
+      .expect(headerPrefix + 'version-id', this.extendedRequest.virtualAppVersion.versionId)
       .end(done);
   });
 
@@ -383,7 +390,7 @@ describe('webPage', function() {
         .get('/some/deep/path')
         .expect(200)
         .expect('content-type', /^text\/html/)
-        .expect('virtual-app-page', 'index.html')
+        .expect(headerPrefix + 'page-path', 'index.html')
         .end(done);
     });
   });
