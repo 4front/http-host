@@ -1,9 +1,11 @@
 var supertest = require('supertest');
 var async = require('async');
+var fs = require('fs');
 var zlib = require('zlib');
 var _ = require('lodash');
 var express = require('express');
 var assert = require('assert');
+var compressible = require('compressible');
 var compression = require('compression');
 var shortid = require('shortid');
 var through = require('through2');
@@ -20,6 +22,7 @@ require('redis-streams')(redis);
 var contentCache = createCache();
 
 var cacheControlHeader = 'public, max-age=31536000, no-cache';
+var customHeaderPrefix = 'x-4front-';
 
 describe('cache', function() {
   var self;
@@ -27,6 +30,7 @@ describe('cache', function() {
   beforeEach(function() {
     self = this;
     this.server = express();
+    this.server.settings.customHttpHeaderPrefix = customHeaderPrefix;
     this.server.settings.contentCache = contentCache;
     this.compressionThreshold = null;
     this.overrideCacheControl = null;
@@ -62,7 +66,7 @@ describe('cache', function() {
         threshold: self.compressionThreshold || '1kb',
         filter: function() {
           // Don't perform compression if the response content came from server cache.
-          return req.ext.cacheHit !== true;
+          return req.ext.cacheHit !== true && compressible(res.get('Content-Type'));
         }
       })(req, res, next);
     });
@@ -115,7 +119,7 @@ describe('cache', function() {
           .get('/')
           .expect(200)
           .expect(self.htmlContent)
-          .expect('x-4front-server-cache', /^miss/)
+          .expect(customHeaderPrefix + 'server-cache', /^miss/)
           .expect(function(res) {
             assert.isTrue(self.loadContent.called);
             nextCacheKey = getCacheKeyFromHeader(res);
@@ -156,7 +160,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/')
           .expect(200)
-          .expect('x-4front-server-cache', /^miss/)
+          .expect(customHeaderPrefix + 'server-cache', /^miss/)
           .expect('Content-Encoding', 'gzip')
           .expect(self.htmlContent)
           .expect(function(res) {
@@ -192,7 +196,7 @@ describe('cache', function() {
         // Now the content is in the cache.
         supertest(self.server).get('/')
           .expect(200)
-          .expect('x-4front-server-cache', /^hit/)
+          .expect(customHeaderPrefix + 'server-cache', /^hit/)
           .expect('Content-Encoding', 'gzip')
           .expect('ETag', etag)
           .expect(self.htmlContent)
@@ -214,7 +218,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/')
           .expect(200)
-          .expect('x-4front-server-cache', /^miss/)
+          .expect(customHeaderPrefix + 'server-cache', /^miss/)
           .expect(self.htmlContent)
           .expect(function(res) {
             assert.isUndefined(res.get('Content-Encoding'));
@@ -249,7 +253,7 @@ describe('cache', function() {
         // Now the content is in the cache.
         supertest(self.server).get('/')
           .expect(200)
-          .expect('x-4front-server-cache', /^hit/)
+          .expect(customHeaderPrefix + 'server-cache', /^hit/)
           .expect('ETag', etag)
           .expect(self.htmlContent)
           .expect(function(res) {
@@ -276,7 +280,7 @@ describe('cache', function() {
           .get('/redirect')
           .expect(302)
           .expect('Cache-Control', cacheControlHeader)
-          .expect('x-4front-server-cache', /^miss/)
+          .expect(customHeaderPrefix + 'server-cache', /^miss/)
           .expect(function(res) {
             assert.isUndefined(res.get('ETag'));
             assert.isTrue(self.loadContent.called);
@@ -303,7 +307,7 @@ describe('cache', function() {
           .get('/redirect')
           .expect(302)
           .expect('Cache-Control', cacheControlHeader)
-          .expect('x-4front-server-cache', /^hit/)
+          .expect(customHeaderPrefix + 'server-cache', /^hit/)
           .expect(function(res) {
             assert.isUndefined(res.get('ETag'));
             assert.equal(getCacheKeyFromHeader(res), cacheKey);
@@ -336,7 +340,7 @@ describe('cache', function() {
           .set('If-None-Match', initialETag)
           .expect(304)
           .expect(function(res) {
-            assert.isUndefined(res.headers['x-4front-server-cache']);
+            assert.isUndefined(res.headers[customHeaderPrefix + 'server-cache']);
             assert.isFalse(self.loadContent.called);
           })
           .end(cb);
@@ -354,6 +358,48 @@ describe('cache', function() {
             assert.isTrue(self.loadContent.called);
             assert.ok(res.headers.etag);
             assert.notEqual(res.headers.etag, initialETag);
+          })
+          .end(cb);
+      }
+    ], done);
+  });
+
+  it('serve jpg image', function(done) {
+    var imageName = shortid.generate() + '.jpg';
+    var cacheKey;
+    var loadImage = sinon.spy(function() {
+      return fs.createReadStream(__dirname + '/fixtures/test.jpg');
+    });
+
+    this.server.get('/' + imageName, function(req, res, next) {
+      res.set('Content-Type', 'image/jpg');
+      loadImage().pipe(res);
+    });
+
+    async.series([
+      function(cb) {
+        supertest(self.server)
+          .get('/' + imageName)
+          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('Content-Type', 'image/jpg')
+          .expect('Cache-Control', cacheControlHeader)
+          .expect(function(res) {
+            assert.isUndefined(res.get('Content-Encoding'));
+            assert.isTrue(loadImage.called);
+            cacheKey = getCacheKeyFromHeader(res);
+          })
+          .end(cb);
+      },
+      function(cb) {
+        loadImage.reset();
+        supertest(self.server)
+          .get('/' + imageName)
+          .expect('Content-Type', 'image/jpg')
+          .expect('Cache-Control', cacheControlHeader)
+          .expect(customHeaderPrefix + 'server-cache', 'hit ' + cacheKey)
+          .expect(function(res) {
+            assert.isUndefined(res.get('Content-Encoding'));
+            assert.isFalse(loadImage.called);
           })
           .end(cb);
       }
