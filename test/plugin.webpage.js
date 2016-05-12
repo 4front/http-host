@@ -144,40 +144,7 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect('Content-Type', /^text\/html/)
-      .expect(headerPrefix + 'version-id', this.extendedRequest.virtualAppVersion.versionId)
       .expect(/\<title\>test page\<\/title\>/)
-      .end(done);
-  });
-
-  it('defaults to no-cache header', function(done) {
-    supertest(this.server)
-      .get('/')
-      .expect(200)
-      .expect('Cache-Control', 'no-cache')
-      .end(done);
-  });
-
-  it('recognizes Cache-Control option', function(done) {
-    this.options.cacheControl = 'max-age=60';
-
-    supertest(this.server)
-      .get('/')
-      .expect(200)
-      .expect('Cache-Control', 'max-age=60')
-      .end(done);
-  });
-
-  it('sets virtual app version header', function(done) {
-    self = this;
-
-    this.extendedRequest.virtualAppVersion = {
-      versionId: '345345'
-    };
-
-    supertest(this.server)
-      .get('/')
-      .expect(200)
-      .expect(headerPrefix + 'version-id', this.extendedRequest.virtualAppVersion.versionId)
       .end(done);
   });
 
@@ -200,7 +167,6 @@ describe('webPage', function() {
       supertest(this.server)
         .get('/blog')
         .expect(302)
-        .expect('Cache-Control', 'no-cache')
         .expect(function(res) {
           assert.equal(res.headers.location, '/blog/');
           assert.isTrue(self.server.settings.storage.fileExists.calledWith(

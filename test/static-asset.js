@@ -103,7 +103,6 @@ describe('staticAsset', function() {
       .expect('Cache-Control', 'max-age=' + self.server.settings.staticAssetMaxAge)
       .expect(function(res) {
         assert.equal(res.text, self.responseText);
-        assert.isFalse(res.headers.etag || false);
         assert.isTrue(self.storage.readFileStream.calledWith(
           urljoin(self.appId, self.versionId, filePath)));
       })
@@ -153,61 +152,6 @@ describe('staticAsset', function() {
     ], done);
   });
 
-  it('serves static asset with etag', function(done) {
-    var filePath = 'folder/data.txt';
-    var initialETag;
-
-    async.series([
-      function(cb) {
-        supertest(self.server)
-          .get('/' + filePath)
-          .expect(200)
-          .expect('Content-Type', 'text/plain')
-          .expect('ETag', self.versionId)
-          .expect('Cache-Control', 'no-cache')
-          .expect(self.responseText)
-          .expect(function(res) {
-            initialETag = res.headers.etag;
-            assert.isTrue(self.storage.readFileStream.calledWith(urljoin(self.appId, self.versionId, filePath)));
-          })
-          .end(cb);
-      },
-      function(cb) {
-        self.storage.readFileStream.reset();
-        supertest(self.server)
-          .get('/' + filePath)
-          .set('If-None-Match', initialETag)
-          .expect(304)
-          .expect(function(res) {
-            assert.isFalse(self.storage.readFileStream.called);
-          })
-          .end(cb);
-      },
-      function(cb) {
-        self.storage.readFileStream.reset();
-        var newVersionId = shortid.generate();
-        self.extendedRequest = {
-          virtualEnv: 'production',
-          virtualApp: {appId: self.appId},
-          virtualAppVersion: {versionId: newVersionId}
-        };
-
-        supertest(self.server)
-          .get('/' + filePath)
-          .set('If-None-Match', initialETag)
-          .expect(200)
-          .expect('Content-Type', 'text/plain')
-          .expect('ETag', newVersionId)
-          .expect('Cache-Control', 'no-cache')
-          .expect(self.responseText)
-          .expect(function(res) {
-            assert.isTrue(self.storage.readFileStream.calledWith(urljoin(self.appId, newVersionId, filePath)));
-          })
-          .end(cb);
-      }
-    ], done);
-  });
-
   it('sets content-type for any non html file type', function(done) {
     this.metadata.contentType = 'application/vnd.android.package-archive';
 
@@ -215,8 +159,6 @@ describe('staticAsset', function() {
       .get('/android.apk')
       .expect(200)
       .expect('Content-Type', this.metadata.contentType)
-      .expect('ETag', self.versionId)
-      .expect('Cache-Control', 'no-cache')
       .end(done);
   });
 
@@ -271,8 +213,6 @@ describe('staticAsset', function() {
       .get('/hello.json')
       .expect('Content-Type', 'application/json')
       .expect('Content-Encoding', 'gzip')
-      .expect('Cache-Control', 'no-cache')
-      .expect('ETag', this.versionId)
       .expect(200)
       .expect(function(res) {
         assert.isTrue(self.storage.readFileStream.calledWith(self.appId + '/' + self.versionId + '/hello.json'));
@@ -293,9 +233,7 @@ describe('staticAsset', function() {
       .set('Accept-Encoding', 'gzip')
       .expect('Content-Type', /^text\/plain/)
       .expect('Content-Encoding', 'gzip')
-      .expect('Cache-Control', 'no-cache')
       .expect('Vary', 'Accept-Encoding')
-      .expect('ETag', this.versionId)
       .expect(200)
       .expect(function(res) {
         assert.equal(res.text, text);

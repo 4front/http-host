@@ -83,7 +83,6 @@ describe('customErrors', function() {
       .get('/')
       .expect(500)
       .expect('Content-Type', /text\/html/)
-      .expect('Cache-Control', 'no-cache')
       .expect(this.server.settings.customHttpHeaderPrefix + 'error-code', 'testError')
       .expect('<html>custom error</html>')
       .expect(function(res) {

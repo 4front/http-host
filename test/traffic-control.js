@@ -11,6 +11,8 @@ var shortid = require('shortid');
 
 require('dash-assert');
 
+var customHttpHeaderPrefix = 'x-4front-';
+
 describe('trafficControl()', function() {
   var self;
   beforeEach(function() {
@@ -18,6 +20,7 @@ describe('trafficControl()', function() {
 
     this.appId = shortid.generate();
     this.server = express();
+    this.server.settings.customHttpHeaderPrefix = customHttpHeaderPrefix;
     this.server.settings.database = {
       getVersion: sinon.spy(function(appId, versionId, callback) {
         callback(null, {versionId: versionId, appId: appId, name: versionId});
@@ -79,8 +82,8 @@ describe('trafficControl()', function() {
         .get('/')
         .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId: '1.1.1', method: 'urlOverride'})))
         .expect(200)
-        .expect('Virtual-App-Version-Method', 'urlOverride')
-        .expect('Virtual-App-Version-Id', '1.1.1')
+        .expect(customHttpHeaderPrefix + 'version-method', 'urlOverride')
+        .expect(customHttpHeaderPrefix + 'version-id', '1.1.1')
         .end(done);
     });
   });
@@ -90,8 +93,8 @@ describe('trafficControl()', function() {
       request(this.server)
         .get('/')
         .expect(200)
-        .expect('Virtual-App-Version-Id', '1')
-        .expect('Virtual-App-Version-Method', 'trafficRules')
+        .expect(customHttpHeaderPrefix + 'version-id', '1')
+        .expect(customHttpHeaderPrefix + 'version-method', 'trafficRules')
         .end(done);
     });
 
@@ -103,7 +106,7 @@ describe('trafficControl()', function() {
       request(this.server)
         .get('/')
         .expect(404)
-        .expect('Error-Code', 'invalidVersionId')
+        .expect('error-code', 'invalidVersionId')
         .end(done);
     });
   });
@@ -114,7 +117,7 @@ describe('trafficControl()', function() {
     request(this.server)
       .get('/')
       .expect(404)
-      .expect('Error-Code', 'noVersionConfigured')
+      .expect('error-code', 'noVersionConfigured')
       .end(done);
   });
 
@@ -132,7 +135,7 @@ describe('trafficControl()', function() {
         .get('/')
         .set('Cookie', '_version=' + encodeURIComponent(JSON.stringify({versionId: '2'})))
         .expect(200)
-        .expect('Virtual-App-Version-Id', '1')
+        .expect(customHttpHeaderPrefix + 'version-id', '1')
         .end(done);
     });
   });
@@ -142,8 +145,8 @@ describe('trafficControl()', function() {
       .get('/')
       .set('Cookie', '_version=invalid_json')
       .expect(200)
-      .expect('Virtual-App-Version-Id', '1')
-      .expect('Virtual-App-Version-Method', 'trafficRules')
+      .expect(customHttpHeaderPrefix + 'version-id', '1')
+      .expect(customHttpHeaderPrefix + 'version-method', 'trafficRules')
       .expect(function(res) {
         assert.ok(res.headers['set-cookie'][0].indexOf('_version=;') > -1);
       })
@@ -163,8 +166,8 @@ describe('trafficControl()', function() {
     request(this.server)
       .get('/')
       .expect(200)
-      .expect('Virtual-App-Version-Id', mostRecentVersion.versionId)
-      .expect('Virtual-App-Version-Method', 'trafficRules')
+      .expect(customHttpHeaderPrefix + 'version-id', mostRecentVersion.versionId)
+      .expect(customHttpHeaderPrefix + 'version-method', 'trafficRules')
       .expect(function(res) {
         assert.isTrue(self.server.settings.database.mostRecentVersion.calledWith(self.appId));
       })

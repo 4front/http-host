@@ -19,6 +19,8 @@ require('redis-streams')(redis);
 
 var contentCache = createCache();
 
+var cacheControlHeader = 'public, max-age=31536000, no-cache';
+
 describe('cache', function() {
   var self;
 
@@ -27,6 +29,7 @@ describe('cache', function() {
     this.server = express();
     this.server.settings.contentCache = contentCache;
     this.compressionThreshold = null;
+    this.overrideCacheControl = null;
 
     this.versionId = shortid.generate();
     this.appId = shortid.generate();
@@ -43,6 +46,10 @@ describe('cache', function() {
           name: self.versionId
         }
       };
+
+      if (self.overrideCacheControl) {
+        res.setHeader('Cache-Control', self.overrideCacheControl);
+      }
       next();
     });
 
@@ -70,7 +77,6 @@ describe('cache', function() {
 
     this.server.get('/', function(req, res, next) {
       res.set('Content-Type', 'text/html');
-      res.set('Cache-Control', 'public, no-cache');
       self.loadContent(req, function(err, html) {
         if (err) return next(err);
         res.send(html);
@@ -175,7 +181,7 @@ describe('cache', function() {
             statusCode: '200',
             ETag: etag,
             'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'public, no-cache',
+            'Cache-Control': cacheControlHeader,
             'Content-Encoding': 'gzip'
           });
           cb();
@@ -233,7 +239,7 @@ describe('cache', function() {
             statusCode: '200',
             ETag: etag,
             'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'public, no-cache'
+            'Cache-Control': cacheControlHeader
           });
         });
         cb();
@@ -259,7 +265,6 @@ describe('cache', function() {
     this.server.get('/redirect', function(req, res, next) {
       self.loadContent(req, function(err) {
         if (err) return next(err);
-        res.set('Cache-Control', 'public, no-cache');
         res.redirect(302, '/destination');
       });
     });
@@ -270,8 +275,10 @@ describe('cache', function() {
         supertest(self.server)
           .get('/redirect')
           .expect(302)
+          .expect('Cache-Control', cacheControlHeader)
           .expect('x-4front-server-cache', /^miss/)
           .expect(function(res) {
+            assert.isUndefined(res.get('ETag'));
             assert.isTrue(self.loadContent.called);
             cacheKey = getCacheKeyFromHeader(res);
           })
@@ -284,7 +291,7 @@ describe('cache', function() {
             statusCode: '302',
             Location: '/destination',
             'Content-Type': 'text/plain; charset=utf-8',
-            'Cache-Control': 'public, no-cache'
+            'Cache-Control': cacheControlHeader
           });
 
           cb();
@@ -295,8 +302,10 @@ describe('cache', function() {
         supertest(self.server)
           .get('/redirect')
           .expect(302)
+          .expect('Cache-Control', cacheControlHeader)
           .expect('x-4front-server-cache', /^hit/)
           .expect(function(res) {
+            assert.isUndefined(res.get('ETag'));
             assert.equal(getCacheKeyFromHeader(res), cacheKey);
             assert.isFalse(self.loadContent.called);
           })
@@ -379,6 +388,24 @@ describe('cache', function() {
 
   it('different accepts headers use different cached responses', function(done) {
     done();
+  });
+
+  it('returns proper public no-cache header', function(done) {
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect('Cache-Control', cacheControlHeader)
+      .end(done);
+  });
+
+  it('does not override Cache-Control if already set', function(done) {
+    this.overrideCacheControl = 'public, max-age=10000';
+
+    supertest(this.server)
+      .get('/')
+      .expect(200)
+      .expect('Cache-Control', this.overrideCacheControl)
+      .end(done);
   });
 
   function getCacheKeyFromHeader(res) {
