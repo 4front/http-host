@@ -45,7 +45,8 @@ describe('webPage', function() {
       virtualAppVersion: {
         versionId: this.versionId,
         name: 'v1'
-      }
+      },
+      contentCacheEnabled: true
     };
 
     this.server.use(function(req, res, next) {
@@ -549,7 +550,7 @@ describe('webPage', function() {
     });
 
     it('caches get requests', function(done) {
-      var etagHeader;
+      var contentCacheKey;
       var htmlResponse;
 
       async.series([
@@ -557,17 +558,18 @@ describe('webPage', function() {
           supertest(self.server)
             .get('/')
             .expect(200)
+            .expect('X-Server-Cache', 'MISS')
             .expect('content-type', /^text\/html/)
             .expect(function(res) {
               assert.isTrue(self.server.settings.storage.readFileStream.called);
               assert.ok(res.headers.etag);
-              etagHeader = res.headers.etag;
+              contentCacheKey = res.headers.etag.slice(1, -1);
               htmlResponse = res.text;
             })
             .end(cb);
         },
         function(cb) {
-          self.contentCache.get(etagHeader, function(err, content) {
+          self.contentCache.get(contentCacheKey, function(err, content) {
             if (err) return cb(err);
             assert.equal(content, htmlResponse);
             cb();
@@ -580,6 +582,8 @@ describe('webPage', function() {
           supertest(self.server)
             .get('/')
             .expect(200)
+            .expect('ETag', '"' + contentCacheKey + '"')
+            .expect('X-Server-Cache', 'HIT')
             .expect(htmlResponse)
             .expect(function(res) {
               assert.isFalse(self.server.settings.storage.readFileStream.called);
@@ -594,12 +598,13 @@ describe('webPage', function() {
           supertest(self.server)
             .get('/')
             .expect(200)
+            .expect('X-Server-Cache', 'MISS')
             .expect(function(res) {
               assert.isTrue(self.server.settings.storage.readFileStream.called);
               assert.ok(res.headers.etag);
-              assert.notEqual(res.headers.etag, etagHeader);
+              assert.notEqual(res.headers.etag, '"' + contentCacheKey + '"');
               assert.notEqual(res.text, htmlResponse);
-              etagHeader = res.headers.etag;
+              contentCacheKey = res.headers.etag.slice(1, -1);
               htmlResponse = res.text;
             })
             .end(cb);
@@ -607,7 +612,7 @@ describe('webPage', function() {
         function(cb) {
           // Check one last time that the html response is in the cache
           // under the new cache key.
-          self.contentCache.get(etagHeader, function(err, content) {
+          self.contentCache.get(contentCacheKey, function(err, content) {
             if (err) return cb(err);
             assert.equal(content, htmlResponse);
             cb();
@@ -615,6 +620,27 @@ describe('webPage', function() {
         }
       ], done);
     });
+  });
+
+  it('does not cache missing pages', function(done) {
+    self.contentCache.flushall();
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.emitter('missing');
+    });
+
+    this.storage.fileExists = sinon.spy(function(filePath, cb) {
+      cb(null, false);
+    });
+
+    supertest(self.server)
+      .get('/missing')
+      .expect(404)
+      .expect('X-Server-Cache', 'MISS')
+      .expect(function(res) {
+        assert.isTrue(self.storage.readFileStream.calledWith(sinon.match(/missing\.html/)));
+        assert.equal(self.contentCache.keys().length, 0);
+      })
+      .end(done);
   });
 });
 
