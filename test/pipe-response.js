@@ -61,6 +61,4 @@ describe('pipeResponse', function() {
       })
       .end(done);
   });
-
-  // TODO: More etag tests
 });

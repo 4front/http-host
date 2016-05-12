@@ -8,7 +8,7 @@ var compression = require('compression');
 var shortid = require('shortid');
 var through = require('through2');
 var testUtil = require('./test-util');
-var memoryCache = require('memory-cache-stream');
+// var memoryCache = require('memory-cache-stream');
 var sinon = require('sinon');
 var debug = require('debug')('4front:http-host:test');
 
@@ -17,8 +17,7 @@ require('dash-assert');
 var redis = require('redis');
 require('redis-streams')(redis);
 
-var contentCache = redis.createClient({return_buffers: true});
-// var anotherCache = redis.createClient({return_buffers: true});
+var contentCache = createCache();
 
 describe('cache', function() {
   var self;
@@ -26,9 +25,6 @@ describe('cache', function() {
   beforeEach(function() {
     self = this;
     this.server = express();
-
-    // contentCache = memoryCache();
-
     this.server.settings.contentCache = contentCache;
     this.compressionThreshold = null;
 
@@ -360,10 +356,24 @@ describe('cache', function() {
   });
 
   it('does not cache certain status codes', function(done) {
-    done();
-  });
-
-  it('changing the versionId forces content to be reloaded', function(done) {
+    // self.contentCache.flushall();
+    // this.storage.readFileStream = sinon.spy(function() {
+    //   return streamTestUtils.emitter('missing');
+    // });
+    //
+    // this.storage.fileExists = sinon.spy(function(filePath, cb) {
+    //   cb(null, false);
+    // });
+    //
+    // supertest(self.server)
+    //   .get('/missing')
+    //   .expect(404)
+    //   .expect('X-Server-Cache', 'MISS')
+    //   .expect(function(res) {
+    //     assert.isTrue(self.storage.readFileStream.calledWith(sinon.match(/missing\.html/)));
+    //     assert.equal(self.contentCache.keys().length, 0);
+    //   })
+    //   .end(done);
     done();
   });
 
@@ -388,7 +398,6 @@ describe('cache', function() {
 
     // WHY do I need to create a seperate cache client? Troublesome.
     var cache = createCache();
-    // var cache = contentCache;
 
     if (!isCompressed) {
       return cache.get(cacheKey + '-content', function(err, content) {
@@ -411,5 +420,7 @@ describe('cache', function() {
 });
 
 function createCache() {
+  // if (!contentCache) contentCache = memoryCache();
+  // return contentCache;
   return redis.createClient({return_buffers: true});
 }
