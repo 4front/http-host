@@ -18,14 +18,11 @@ describe('customErrors', function() {
     self = this;
 
     this.server = express();
+    this.server.settings.customHttpHeaderPrefix = 'x-4front-';
     this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
         return sbuff('<html>custom error</html>');
       })
-    };
-
-    this.server.settings.logger = {
-      error: sinon.spy(function() {})
     };
 
     this.server.settings.logger = {
@@ -87,7 +84,7 @@ describe('customErrors', function() {
       .expect(500)
       .expect('Content-Type', /text\/html/)
       .expect('Cache-Control', 'no-cache')
-      .expect('Error-Code', 'testError')
+      .expect(this.server.settings.customHttpHeaderPrefix + 'error-code', 'testError')
       .expect('<html>custom error</html>')
       .expect(function(res) {
         assert.ok(self.server.settings.storage.readFileStream.calledWith(
@@ -143,21 +140,6 @@ describe('customErrors', function() {
       .get('/')
       .expect(500)
       .expect('Error-Handler', 'fallback')
-      .end(done);
-  });
-
-  it('uses override loadPageMiddleware', function(done) {
-    this.updateRequest = function(req) {
-      req.ext.loadPageMiddleware = function(_req, res, next) {
-        req.ext.webPageStream = sbuff('<html>special</html>');
-        next();
-      };
-    };
-
-    supertest(this.server)
-      .get('/')
-      .expect(500)
-      .expect('<html>special</html>')
       .end(done);
   });
 
