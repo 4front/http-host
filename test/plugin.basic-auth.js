@@ -123,7 +123,10 @@ describe('basicAuth()', function() {
       this.options.loginPage = 'login.html';
       var loginPageContent = '<html><head></head>login page</html>';
 
-      server.settings.storage = {
+      self.storage = server.settings.storage = {
+        fileExists: sinon.spy(function(filePath, callback) {
+          callback(null, true);
+        }),
         readFileStream: sinon.spy(function() {
           return streamTestUtils.buffer(loginPageContent);
         })
@@ -140,9 +143,10 @@ describe('basicAuth()', function() {
             .expect(/login page/)
             .expect(/XMLHttpRequest/)
             .expect(function(res) {
-              assert.isTrue(server.settings.storage.readFileStream.calledWith(
-                self.appId + '/' + self.versionId + '/login.html'));
-              assert.isEmpty(res.headers.etag);
+              var loginPath = self.appId + '/' + self.versionId + '/login.html';
+              assert.isTrue(self.storage.fileExists.calledWith(loginPath));
+              assert.isTrue(self.storage.readFileStream.calledWith(loginPath));
+              assert.isEmpty(res.get('ETag'));
             })
             .end(cb);
         },
@@ -168,9 +172,9 @@ describe('basicAuth()', function() {
     });
 
     it('uses browser prompt if login page missing', function(done) {
-      server.settings.storage.readFileStream = function() {
-        return streamTestUtils.emitter('missing');
-      };
+      self.storage.fileExists = sinon.spy(function(filePath, callback) {
+        callback(null, false);
+      });
 
       supertest(server).get('/')
         .expect(401)

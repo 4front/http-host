@@ -5,7 +5,6 @@ var _ = require('lodash');
 var assert = require('assert');
 var sinon = require('sinon');
 var sbuff = require('simple-bufferstream');
-var testUtil = require('./test-util');
 var customErrors = require('../lib/plugins/custom-errors');
 
 require('dash-assert');
@@ -19,7 +18,10 @@ describe('customErrors', function() {
 
     this.server = express();
     this.server.settings.customHttpHeaderPrefix = 'x-4front-';
-    this.server.settings.storage = {
+    this.server.settings.storage = this.storage = {
+      fileExists: sinon.spy(function(filePath, callback) {
+        callback(null, true);
+      }),
       readFileStream: sinon.spy(function() {
         return sbuff('<html>custom error</html>');
       })
@@ -52,6 +54,12 @@ describe('customErrors', function() {
 
       next();
     });
+
+    this.storagePath = function(filePath) {
+      return urljoin(self.virtualApp.appId,
+        self.virtualAppVersion.versionId,
+        filePath);
+    };
 
     this.options = {
       errors: {
@@ -86,13 +94,11 @@ describe('customErrors', function() {
       .expect(this.server.settings.customHttpHeaderPrefix + 'error-code', 'testError')
       .expect('<html>custom error</html>')
       .expect(function(res) {
-        assert.ok(self.server.settings.storage.readFileStream.calledWith(
-          urljoin(self.virtualApp.appId,
-            self.virtualAppVersion.versionId,
-            '500.html')));
-
-        assert.isUndefined(res.headers.etag);
-        assert.ok(self.server.settings.logger.error.called);
+        var storagePath = self.storagePath('500.html');
+        assert.isTrue(self.storage.fileExists.calledWith(storagePath));
+        assert.isTrue(self.storage.readFileStream.calledWith(storagePath));
+        assert.isUndefined(res.get('ETag'));
+        assert.isTrue(self.server.settings.logger.error.called);
       })
       .end(done);
   });
@@ -130,9 +136,9 @@ describe('customErrors', function() {
       .end(done);
   });
 
-  it('advances to fallback if page stream missing', function(done) {
-    this.server.settings.storage.readFileStream = function() {
-      return testUtil.createMissingStream();
+  it('advances to fallback if error page is missing', function(done) {
+    this.storage.fileExists = function(filePath, callback) {
+      callback(null, false);
     };
 
     supertest(this.server)

@@ -51,7 +51,12 @@ describe('virtualRouter', function() {
       res.json(req.ext);
     });
 
-    this.server.use(testUtil.errorHandler);
+    this.server.use(function(err, req, res, next) {
+      if (err.code === 'pluginRequireError') {
+        return res.status(500).json({code: err.code});
+      }
+      testUtil.errorHandler(err, req, res, next);
+    });
   });
 
   it('invokes two plugins', function(done) {

@@ -34,6 +34,9 @@ describe('webPage', function() {
     this.contentCache = this.server.settings.contentCache;
 
     this.storage = this.server.settings.storage = {
+      fileExists: sinon.spy(function(filePath, callback) {
+        callback(null, true);
+      }),
       readFileStream: sinon.spy(function() {
         return streamTestUtils.buffer(self.pageContent);
       })
@@ -53,6 +56,12 @@ describe('webPage', function() {
         name: 'v1'
       },
       contentCacheEnabled: true
+    };
+
+    this.storagePath = function(filePath) {
+      return urljoin(self.extendedRequest.virtualApp.appId,
+        self.extendedRequest.virtualAppVersion.versionId,
+        filePath);
     };
 
     this.server.use(function(req, res, next) {
@@ -93,10 +102,9 @@ describe('webPage', function() {
         .expect(200)
         .expect(headerPrefix + 'page-path', 'docs/getting-started.html')
         .expect(function(res) {
-          assert.ok(self.server.settings.storage.readFileStream.calledWith(
-            urljoin(self.extendedRequest.virtualApp.appId,
-              self.extendedRequest.virtualAppVersion.versionId,
-              'docs/getting-started.html')));
+          var storagePath = self.storagePath('docs/getting-started.html');
+          assert.isTrue(self.storage.fileExists.calledWith(storagePath));
+          assert.ok(self.server.settings.storage.readFileStream.calledWith(storagePath));
         })
         .end(done);
     });
@@ -107,10 +115,9 @@ describe('webPage', function() {
         .expect(200)
         .expect(headerPrefix + 'page-path', 'index.html')
         .expect(function(res) {
-          assert.ok(self.server.settings.storage.readFileStream.calledWith(
-            urljoin(self.extendedRequest.virtualApp.appId,
-              self.extendedRequest.virtualAppVersion.versionId,
-              'index.html')));
+          var storagePath = self.storagePath('index.html');
+          assert.isTrue(self.storage.fileExists.calledWith(storagePath));
+          assert.isTrue(self.storage.readFileStream.calledWith(storagePath));
         })
         .end(done);
     });
@@ -121,10 +128,9 @@ describe('webPage', function() {
         .expect(200)
         .expect(headerPrefix + 'page-path', 'docs/index.html')
         .expect(function(res) {
-          assert.ok(self.server.settings.storage.readFileStream.calledWith(
-            urljoin(self.extendedRequest.virtualApp.appId,
-              self.extendedRequest.virtualAppVersion.versionId,
-              'docs/index.html')));
+          var storagePath = self.storagePath('docs/index.html');
+          assert.isTrue(self.storage.fileExists.calledWith(storagePath));
+          assert.isTrue(self.storage.readFileStream.calledWith(storagePath));
         })
         .end(done);
     });
@@ -152,9 +158,6 @@ describe('webPage', function() {
     beforeEach(function() {
       self = this;
       this.existingFiles = [];
-      this.server.settings.storage.readFileStream = function() {
-        return streamTestUtils.emitter('missing');
-      };
 
       this.server.settings.storage.fileExists = sinon.spy(function(filePath, cb) {
         cb(null, _.includes(self.existingFiles, filePath));
@@ -168,9 +171,10 @@ describe('webPage', function() {
         .get('/blog')
         .expect(302)
         .expect(function(res) {
+          var storagePath = self.storagePath('blog/index.html');
           assert.equal(res.headers.location, '/blog/');
-          assert.isTrue(self.server.settings.storage.fileExists.calledWith(
-            self.appId + '/' + self.versionId + '/blog/index.html'));
+          assert.isTrue(self.storage.fileExists.calledWith(storagePath));
+          assert.isFalse(self.storage.readFileStream.called);
         })
         .end(done);
     });
@@ -182,9 +186,10 @@ describe('webPage', function() {
         .get('/blog/')
         .expect(302)
         .expect(function(res) {
+          var storagePath = self.storagePath('blog.html');
           assert.equal(res.headers.location, '/blog');
-          assert.isTrue(self.server.settings.storage.fileExists.calledWith(
-            self.appId + '/' + self.versionId + '/blog.html'));
+          assert.isTrue(self.storage.fileExists.calledWith(storagePath));
+          assert.isFalse(self.storage.readFileStream.called);
         })
         .end(done);
     });
@@ -196,9 +201,10 @@ describe('webPage', function() {
         .get('/Path/About?foo=1')
         .expect(301)
         .expect(function(res) {
+          var storagePath = self.storagePath('path/about.html');
           assert.equal(res.headers.location, '/path/about?foo=1');
-          assert.isTrue(self.server.settings.storage.fileExists.calledWith(
-            self.appId + '/' + self.versionId + '/path/about.html'));
+          assert.isTrue(self.storage.fileExists.calledWith(storagePath));
+          assert.isFalse(self.storage.readFileStream.called);
         })
         .end(done);
     });
@@ -242,13 +248,11 @@ describe('webPage', function() {
         .expect(200)
         .expect('Content-Type', 'application/xml')
         .expect(function(res) {
-          assert.equal(self.storage.readFileStream.callCount, 2);
-          assert.isTrue(self.storage.readFileStream.calledWith(
-            self.appId + '/' + self.versionId + '/index.html'));
-          assert.isTrue(self.storage.readFileStream.calledWith(
-            self.appId + '/' + self.versionId + '/index.xml'));
-          assert.isTrue(self.storage.fileExists.calledWith(
-            self.appId + '/' + self.versionId + '/index.xml'));
+          var indexXmlPath = self.storagePath('index.xml');
+          assert.equal(self.storage.readFileStream.callCount, 1);
+          assert.isTrue(self.storage.fileExists.calledWith(self.storagePath('index.html')));
+          assert.isTrue(self.storage.fileExists.calledWith(indexXmlPath));
+          assert.isTrue(self.storage.readFileStream.calledWith(indexXmlPath));
         })
         .end(done);
     });
@@ -260,17 +264,11 @@ describe('webPage', function() {
         .expect(200)
         .expect('Content-Type', 'application/json')
         .expect(function(res) {
-          assert.isTrue(self.storage.fileExists.calledWith(
-            self.appId + '/' + self.versionId + '/blog/index.xml'));
-          assert.isTrue(self.storage.fileExists.calledWith(
-            self.appId + '/' + self.versionId + '/blog/index.json'));
-          assert.equal(self.storage.readFileStream.callCount, 2);
-          assert.isTrue(self.storage.readFileStream.calledWith(
-            self.appId + '/' + self.versionId + '/blog/index.html'));
-          assert.isFalse(self.storage.readFileStream.calledWith(
-            self.appId + '/' + self.versionId + '/blog/index.xml'));
-          assert.isTrue(self.storage.readFileStream.calledWith(
-            self.appId + '/' + self.versionId + '/blog/index.json'));
+          var indexJsonPath = self.storagePath('blog/index.json');
+          assert.equal(self.storage.readFileStream.callCount, 1);
+          assert.isTrue(self.storage.fileExists.calledWith(self.storagePath('blog/index.html')));
+          assert.isTrue(self.storage.fileExists.calledWith(indexJsonPath));
+          assert.isTrue(self.storage.readFileStream.calledWith(indexJsonPath));
         })
         .end(done);
     });
