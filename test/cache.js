@@ -19,7 +19,7 @@ require('dash-assert');
 var redis = require('redis');
 require('redis-streams')(redis);
 
-var contentCache = createCache();
+var contentCache = redis.createClient({return_buffers: true});
 
 var cacheControlHeader = 'public, max-age=31536000, no-cache';
 var customHeaderPrefix = 'x-4front-';
@@ -30,8 +30,17 @@ describe('cache', function() {
   beforeEach(function() {
     self = this;
     this.server = express();
-    this.server.settings.customHttpHeaderPrefix = customHeaderPrefix;
-    this.server.settings.contentCache = contentCache;
+
+    this.mockMetrics = {
+      increment: sinon.spy(function() {})
+    };
+
+    _.assign(this.server.settings, {
+      customHttpHeaderPrefix: customHeaderPrefix,
+      contentCache: contentCache,
+      metrics: this.mockMetrics
+    });
+
     this.compressionThreshold = null;
     this.overrideCacheControl = null;
 
@@ -111,6 +120,9 @@ describe('cache', function() {
           .end(cb);
       },
       function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
         self.loadContent.reset();
         self.versionId = shortid.generate();
         self.htmlContent = '<html>' + self.versionId + '</html>';
@@ -131,6 +143,9 @@ describe('cache', function() {
             assert.isTrue(contentCache.exists(nextCacheKey + '-headers'));
           })
           .end(cb);
+      },
+      function(cb) {
+        setTimeout(cb, 20);
       },
       function(cb) {
         getContentFromCache(initialCacheKey, false, function(err, content) {
@@ -173,11 +188,17 @@ describe('cache', function() {
           .end(cb);
       },
       function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
         getContentFromCache(cacheKey, true, function(err, content) {
           if (err) return cb(err);
           assert.equal(content, self.htmlContent);
           cb();
         });
+      },
+      function(cb) {
+        setTimeout(cb, 20);
       },
       function(cb) {
         getHeadersFromCache(cacheKey, function(err, headers) {
@@ -190,6 +211,9 @@ describe('cache', function() {
           });
           cb();
         });
+      },
+      function(cb) {
+        setTimeout(cb, 20);
       },
       function(cb) {
         self.loadContent.reset();
@@ -231,11 +255,17 @@ describe('cache', function() {
           .end(cb);
       },
       function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
         getContentFromCache(cacheKey, false, function(err, content) {
           if (err) return cb(err);
           assert.equal(content, self.htmlContent);
           cb();
         });
+      },
+      function(cb) {
+        setTimeout(cb, 20);
       },
       function(cb) {
         getHeadersFromCache(cacheKey, function(_err, headers) {
@@ -247,6 +277,9 @@ describe('cache', function() {
           });
         });
         cb();
+      },
+      function(cb) {
+        setTimeout(cb, 20);
       },
       function(cb) {
         self.loadContent.reset();
@@ -289,6 +322,9 @@ describe('cache', function() {
           .end(cb);
       },
       function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
         getHeadersFromCache(cacheKey, function(err, headers) {
           if (err) return cb(err);
           assert.deepEqual(headers, {
@@ -300,6 +336,9 @@ describe('cache', function() {
 
           cb();
         });
+      },
+      function(cb) {
+        setTimeout(cb, 20);
       },
       function(cb) {
         self.loadContent.reset();
@@ -334,6 +373,9 @@ describe('cache', function() {
           .end(cb);
       },
       function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
         self.loadContent.reset();
         supertest(self.server)
           .get('/')
@@ -344,6 +386,9 @@ describe('cache', function() {
             assert.isFalse(self.loadContent.called);
           })
           .end(cb);
+      },
+      function(cb) {
+        setTimeout(cb, 20);
       },
       function(cb) {
         self.loadContent.reset();
@@ -391,6 +436,9 @@ describe('cache', function() {
           .end(cb);
       },
       function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
         loadImage.reset();
         supertest(self.server)
           .get('/' + imageName)
@@ -405,6 +453,37 @@ describe('cache', function() {
       }
     ], done);
   });
+
+  it('metrics are incremented', function(done) {
+    async.series([
+      function(cb) {
+        supertest(self.server)
+          .get('/')
+          .expect(200)
+          .expect('x-4front-server-cache', /^miss/)
+          .expect(function(res) {
+            assert.isTrue(self.mockMetrics.increment.calledWith('content-cache-miss'));
+          })
+          .end(cb);
+      },
+      function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
+        self.mockMetrics.increment.reset();
+
+        supertest(self.server)
+          .get('/')
+          .expect(200)
+          .expect(customHeaderPrefix + 'server-cache', /^hit/)
+          .expect(function(res) {
+            assert.isTrue(self.mockMetrics.increment.calledWith('content-cache-hit'));
+          })
+          .end(cb);
+      }
+    ], done);
+  });
+
 
   it('returns custom headers when response served from cache', function(done) {
     done();
@@ -474,16 +553,16 @@ describe('cache', function() {
     debug('get content from cache key=%s-content', cacheKey);
 
     // WHY do I need to create a seperate cache client? Troublesome.
-    var cache = createCache();
+    // var cache = createCache();
 
     if (!isCompressed) {
-      return cache.get(cacheKey + '-content', function(err, content) {
+      return contentCache.get(cacheKey + '-content', function(err, content) {
         callback(null, content.toString());
       });
     }
 
     var cachedContent = '';
-    cache.readStream(cacheKey + '-content')
+    contentCache.readStream(cacheKey + '-content')
       .pipe(zlib.createGunzip())
       .pipe(through.obj(function(chunk, enc, cb) {
         debug('reading chunk from %s-content', cacheKey);
@@ -495,9 +574,3 @@ describe('cache', function() {
       });
   }
 });
-
-function createCache() {
-  // if (!contentCache) contentCache = memoryCache();
-  // return contentCache;
-  return redis.createClient({return_buffers: true});
-}
