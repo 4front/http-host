@@ -105,6 +105,9 @@ describe('integration', function() {
           .end(cb);
       },
       function(cb) {
+        setTimeout(cb, 10);
+      },
+      function(cb) {
         // Subsequent request should be served from the server cache
         self.storage.fileExists.reset();
         self.storage.readFileStream.reset();
@@ -153,6 +156,9 @@ describe('integration', function() {
             assert.isTrue(self.storage.readFileStream.calledWith(storagePath));
           })
           .end(cb);
+      },
+      function(cb) {
+        setTimeout(cb, 10);
       },
       function(cb) {
         // Subsequent request should be served from the server cache
