@@ -1,6 +1,7 @@
 var supertest = require('supertest');
 var async = require('async');
 var fs = require('fs');
+var bytes = require('bytes');
 var zlib = require('zlib');
 var _ = require('lodash');
 var express = require('express');
@@ -10,6 +11,7 @@ var compression = require('compression');
 var shortid = require('shortid');
 var through = require('through2');
 var testUtil = require('./test-util');
+var streamTestUtils = require('./stream-test-utils');
 // var memoryCache = require('memory-cache-stream');
 var sinon = require('sinon');
 var debug = require('debug')('4front:http-host:test');
@@ -38,7 +40,8 @@ describe('cache', function() {
     _.assign(this.server.settings, {
       customHttpHeaderPrefix: customHeaderPrefix,
       contentCache: contentCache,
-      metrics: this.mockMetrics
+      metrics: this.mockMetrics,
+      maxContentCacheLength: bytes.parse('500kb')
     });
 
     this.compressionThreshold = null;
@@ -67,7 +70,9 @@ describe('cache', function() {
     });
 
     // Declare the custom event-emitter middleware before compression
-    this.server.use(require('../lib/middleware/event-emitter')(this.server.settings));
+    this.server.use(function(req, res, next) {
+      require('../lib/middleware/event-emitter')(self.server.settings)(req, res, next);
+    });
 
     // Force everything to be compressed for testing purposes.
     this.server.use(function(req, res, next) {
@@ -489,26 +494,87 @@ describe('cache', function() {
     done();
   });
 
-  it('does not cache certain status codes', function(done) {
-    // self.contentCache.flushall();
-    // this.storage.readFileStream = sinon.spy(function() {
-    //   return streamTestUtils.emitter('missing');
-    // });
-    //
-    // this.storage.fileExists = sinon.spy(function(filePath, cb) {
-    //   cb(null, false);
-    // });
-    //
-    // supertest(self.server)
-    //   .get('/missing')
-    //   .expect(404)
-    //   .expect('X-Server-Cache', 'MISS')
-    //   .expect(function(res) {
-    //     assert.isTrue(self.storage.readFileStream.calledWith(sinon.match(/missing\.html/)));
-    //     assert.equal(self.contentCache.keys().length, 0);
-    //   })
-    //   .end(done);
-    done();
+  it('does not set ETag on 404 responses', function(done) {
+    var cacheKey;
+    var pageName = shortid.generate();
+    var notFoundResponse = '<html>not found</html>';
+
+    var loadNotFound = sinon.spy(function() {
+      return streamTestUtils.buffer(notFoundResponse);
+    });
+
+    this.server.get('/' + pageName, function(req, res) {
+      res.set('Content-Type', 'text/html');
+      res.status(404);
+      loadNotFound().pipe(res);
+    });
+
+    async.series([
+      function(cb) {
+        supertest(self.server)
+          .get('/' + pageName)
+          .expect(404)
+          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect(notFoundResponse)
+          .expect(function(res) {
+            assert.isTrue(loadNotFound.called);
+            assert.isUndefined(res.get('ETag'));
+            cacheKey = getCacheKeyFromHeader(res);
+            // assert.equal(self.contentCache.keys().length, 0);
+          })
+          .end(cb);
+      },
+      function(cb) {
+        setTimeout(cb, 10);
+      },
+      function(cb) {
+        // TODO: In the future we should cache 404 responses, but in a slightly
+        // different way. Cache the headers in the usual way, but cache the
+        // 404 page content itself using a special key. This way all 404 responses
+        // no matter the URL refer to the same object. Otherwise the cache could get
+        // flooded with many different keys but all with the same content.
+        contentCache.exists(cacheKey + '-content', function(err, exists) {
+          assert.equal(0, exists);
+          cb();
+        });
+      }
+    ], done);
+  });
+
+  it('too large of a response is not cached', function(done) {
+    // Override the maxContentCacheLength to a value less than
+    // the size of test.jpg
+    this.server.settings.maxContentCacheLength = bytes.parse('5k');
+    this.server.get('/test.jpg', function(req, res) {
+      res.sendFile(__dirname + '/fixtures/test.jpg');
+    });
+
+    var cacheKey;
+    async.series([
+      function(cb) {
+        supertest(self.server).get('/test.jpg')
+          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect(function(res) {
+            cacheKey = getCacheKeyFromHeader(res);
+          })
+          .end(cb);
+      },
+      function(cb) {
+        setTimeout(cb, 20);
+      },
+      function(cb) {
+        contentCache.exists(cacheKey + '-content', function(err, exists) {
+          assert.equal(exists, 0);
+          cb();
+        });
+      },
+      function(cb) {
+        contentCache.exists(cacheKey + '-headers', function(err, exists) {
+          assert.equal(exists, 0);
+          cb();
+        });
+      }
+    ], done);
   });
 
   it('different accepts headers use different cached responses', function(done) {
