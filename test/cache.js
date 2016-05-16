@@ -307,7 +307,7 @@ describe('cache', function() {
     this.server.get('/redirect', function(req, res, next) {
       self.loadContent(req, function(err) {
         if (err) return next(err);
-        res.redirect(302, '/destination');
+        res.redirect(302, '/destination' + req.originalUrl.substr(req.originalUrl.indexOf('?')));
       });
     });
 
@@ -315,7 +315,7 @@ describe('cache', function() {
     async.series([
       function(cb) {
         supertest(self.server)
-          .get('/redirect')
+          .get('/redirect?original=1')
           .expect(302)
           .expect('Cache-Control', cacheControlHeader)
           .expect(customHeaderPrefix + 'server-cache', /^miss/)
@@ -348,12 +348,13 @@ describe('cache', function() {
       function(cb) {
         self.loadContent.reset();
         supertest(self.server)
-          .get('/redirect')
+          .get('/redirect?new=1')
           .expect(302)
           .expect('Cache-Control', cacheControlHeader)
           .expect(customHeaderPrefix + 'server-cache', /^hit/)
           .expect(function(res) {
             assert.isUndefined(res.get('ETag'));
+            assert.equal(res.get('Location'), '/destination?new=1');
             assert.equal(getCacheKeyFromHeader(res), cacheKey);
             assert.isFalse(self.loadContent.called);
           })
