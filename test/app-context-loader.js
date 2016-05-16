@@ -2,16 +2,20 @@
 
 var assert = require('assert');
 var sinon = require('sinon');
-var virtualAppLoader = require('../lib/middleware/app-loader');
+var async = require('async');
+var appContextLoader = require('../lib/middleware/app-context-loader');
 var express = require('express');
 var shortid = require('shortid');
 var request = require('supertest');
 var _ = require('lodash');
 var debug = require('debug');
 var testUtil = require('./test-util');
+// var memoryCache = require('memory-cache-stream');
 var redis = require('redis');
 
 require('dash-assert');
+var redisClient = redis.createClient();
+var customHeaderPrefix = 'x-4front-';
 
 describe('virtualAppLoader()', function() {
   var self;
@@ -27,13 +31,15 @@ describe('virtualAppLoader()', function() {
     });
 
     this.appId = shortid.generate();
+    this.appName = 'app-' + this.appId.replace('_', '-').toLowerCase();
     this.versionId = shortid.generate();
-    this.virtualHost = shortid.generate().toLowerCase() + '.com';
+    this.virtualHost = randomDomain();
     this.env = {};
 
     _.extend(this.server.settings, {
       virtualHost: self.virtualHost,
-      defaultVirtualEnvironment: 'production'
+      defaultVirtualEnvironment: 'production',
+      customHttpHeaderPrefix: customHeaderPrefix
     });
 
     this.database = this.server.settings.database = {
@@ -47,6 +53,7 @@ describe('virtualAppLoader()', function() {
 
     this.virtualApp = {
       appId: self.appId,
+      name: self.appName,
       env: self.env,
       trafficRules: {
         production: [
@@ -55,8 +62,11 @@ describe('virtualAppLoader()', function() {
       }
     };
 
-    this.cache = this.server.settings.cache = redis.createClient();
-    this.server.settings.metrics = {increment: sinon.spy(function() {})};
+    this.cache = this.server.settings.cache = redisClient;
+    // this.cache = this.server.settings.cache = memoryCache();
+    this.metrics = this.server.settings.metrics = {
+      increment: sinon.spy(function() {})
+    };
 
     this.appRegistry = this.server.settings.virtualAppRegistry = {
       getByName: sinon.spy(function(name, callback) {
@@ -67,7 +77,14 @@ describe('virtualAppLoader()', function() {
       })
     };
 
-    this.server.use(virtualAppLoader(this.server.settings));
+    this.server.use(function(req, res, next) {
+      req.ext = {
+        appCacheEnabled: true
+      };
+      next();
+    });
+
+    this.server.use(appContextLoader(this.server.settings));
 
     this.server.use(function(req, res, next) {
       res.json(_.pick(req.ext, 'virtualEnv', 'virtualApp', 'virtualHost',
@@ -130,7 +147,7 @@ describe('virtualAppLoader()', function() {
   describe('request with custom domain', function() {
     beforeEach(function() {
       self = this;
-      this.domainName = shortid.generate().toLowerCase() + '.com';
+      this.domainName = randomDomain();
     });
 
     it('find app with subdomain', function(done) {
@@ -194,7 +211,7 @@ describe('virtualAppLoader()', function() {
 
     it('return 404 for invalid environment for apex domain', function(done) {
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
-        if (subDomain === 'test') {
+        if (subDomain === 'test' || subDomain === '*') {
           callback(null, null);
         } else {
           callback(null, _.assign(self.virtualApp, {environments: ['production', 'staging']}));
@@ -203,7 +220,7 @@ describe('virtualAppLoader()', function() {
 
       request(this.server)
         .get('/')
-        .set('Host', 'test.customdomain.com')
+        .set('Host', 'test.' + self.domainName)
         .expect(404)
         .expect('Error-Code', 'invalidVirtualEnv')
         .end(done);
@@ -228,14 +245,41 @@ describe('virtualAppLoader()', function() {
         .set('Host', 'test.' + self.domainName)
         .expect(200)
         .expect(function(res) {
-          assert.equal(self.appRegistry.getByDomain.callCount, 2);
+          assert.equal(self.appRegistry.getByDomain.callCount, 3);
           assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'test'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '*'));
           assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '@'));
           assert.equal(res.body.virtualEnv, 'test');
           assert.equal(res.body.virtualHost, self.domainName);
           assert.equal(res.body.virtualApp.appId, self.appId);
         })
         .end(done);
+    });
+
+    it('wildcard subdomain', function(done) {
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        if (subDomain === '*') {
+          return callback(null, self.virtualApp);
+        }
+        callback(null, null);
+      });
+
+      async.eachSeries(['client1', 'client2'], function(subDomain, cb) {
+        self.appRegistry.getByDomain.reset();
+        request(self.server)
+          .get('/')
+          .set('Host', subDomain + '.' + self.domainName)
+          .expect(200)
+          .expect(function(res) {
+            assert.equal(self.appRegistry.getByDomain.callCount, 2);
+            assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, subDomain));
+            assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '*'));
+            assert.equal(res.body.virtualEnv, 'production');
+            assert.equal(res.body.virtualHost, subDomain + '.' + self.domainName);
+            assert.equal(res.body.virtualApp.appId, self.appId);
+          })
+          .end(cb);
+      }, done);
     });
 
     it('404 for request where there is no www and no apex', function(done) {
@@ -248,8 +292,9 @@ describe('virtualAppLoader()', function() {
         .set('Host', 'www.' + self.domainName)
         .expect(404)
         .expect(function(res) {
-          assert.equal(self.appRegistry.getByDomain.callCount, 2);
+          assert.equal(self.appRegistry.getByDomain.callCount, 3);
           assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'www'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '*'));
           assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '@'));
         })
         .end(done);
@@ -261,22 +306,54 @@ describe('virtualAppLoader()', function() {
         callback(null, {url: 'https://www.' + self.domainName});
       });
 
-      request(this.server)
-        .get('/blog')
-        .set('Host', self.domainName)
-        .expect(302)
-        .expect(function(res) {
-          assert.equal(self.appRegistry.getByDomain.callCount, 2);
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '@'));
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'www'));
-          assert.equal(res.headers.location, 'https://www.' + self.domainName + '/blog');
-        })
-        .end(done);
+      async.series([
+        function(cb) {
+          request(self.server)
+            .get('/blog?foo=1')
+            .set('Host', self.domainName)
+            .expect(302)
+            .expect(function(res) {
+              assert.equal(self.appRegistry.getByDomain.callCount, 2);
+              assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '@'));
+              assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'www'));
+              assert.equal(res.headers.location, 'https://www.' + self.domainName + '/blog?foo=1');
+            })
+            .end(cb);
+        },
+        function(cb) {
+          setTimeout(cb, 10);
+        },
+        function(cb) {
+          redisClient.get(self.domainName, function(err, value) {
+            if (err) return cb(err);
+            assert.isString(value);
+            var cachedContext = JSON.parse(value);
+            assert.equal(cachedContext.redirect.location, 'https://www.' + self.domainName);
+            assert.equal(cachedContext.redirect.statusCode, 302);
+            cb();
+          });
+        },
+        // Subsequent request should use cached 302 response
+        function(cb) {
+          self.appRegistry.getByDomain.reset();
+          self.database.getVersion.reset();
+          request(self.server)
+            .get('/path?foo=2')
+            .set('Host', self.domainName)
+            .expect(302)
+            .expect(function(res) {
+              assert.equal(res.headers.location, 'https://www.' + self.domainName + '/path?foo=2');
+              assert.isFalse(self.appRegistry.getByDomain.called);
+              assert.isFalse(self.database.getVersion.called);
+            })
+            .end(cb);
+        }
+      ], done);
     });
 
     it('request for www redirects to apex', function(done) {
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
-        if (subDomain === 'www') return callback(null, null);
+        if (subDomain === 'www' || subDomain === '*') return callback(null, null);
         callback(null, {
           url: 'https://' + self.domainName,
           environments: ['dev', 'production']
@@ -288,9 +365,10 @@ describe('virtualAppLoader()', function() {
         .set('Host', 'www.' + this.domainName)
         .expect(302)
         .expect(function(res) {
-          assert.equal(self.appRegistry.getByDomain.callCount, 2);
+          assert.equal(self.appRegistry.getByDomain.callCount, 3);
           assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'www'));
           assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '@'));
+          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '*'));
           assert.equal(res.headers.location, 'https://' + self.domainName + '/blog');
         })
         .end(done);
@@ -329,7 +407,7 @@ describe('virtualAppLoader()', function() {
     });
 
     it('should redirect custom domains when requireSsl is true', function(done) {
-      var customDomain = shortid.generate().toLowerCase() + '.net';
+      var customDomain = randomDomain();
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
         callback(null, _.assign(self.virtualApp, {
           requireSsl: true,
@@ -349,7 +427,7 @@ describe('virtualAppLoader()', function() {
     });
 
     it('should redirect staging custom domain to https', function(done) {
-      var customDomain = shortid.generate().toLowerCase() + '.net';
+      var customDomain = randomDomain();
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
         if (subDomain === '@') {
           callback(null, {requireSsl: true, urls: {
@@ -362,17 +440,19 @@ describe('virtualAppLoader()', function() {
       });
 
       request(this.server)
-        .get('/path')
+        .get('/path?foo=1')
         .set('Host', 'test.' + customDomain)
         .expect(302)
         .expect(function(res) {
-          assert.equal(res.headers.location, 'https://test.' + customDomain + '/path');
+          assert.equal(res.headers.location, 'https://test.' + customDomain + '/path?foo=1');
+          assert.isTrue(self.appRegistry.getByDomain.calledWith(customDomain, 'test'));
+          assert.isFalse(self.database.getVersion.called);
         })
         .end(done);
     });
 
     it('does not redirect custom domains when requireSsl is false', function(done) {
-      var customDomain = shortid.generate().toLowerCase() + '.net';
+      var customDomain = randomDomain();
       this.appRegistry.getByDomain = function(domainName, subDomain, callback) {
         callback(null, _.assign(self.virtualApp, {requireSsl: false}));
       };
@@ -441,13 +521,82 @@ describe('virtualAppLoader()', function() {
     });
   });
 
-  // describe('app cache', function() {
-  // });
+  describe('app cache', function() {
+    it('shared domain apps', function(done) {
+      testAppContextCache(self.virtualHost, self.appName, done);
+    });
+
+    it('custom domains', function(done) {
+      var subDomain = shortid.generate().toLowerCase();
+      var customDomain = randomDomain();
+      testAppContextCache(customDomain, subDomain, done);
+    });
+
+    function testAppContextCache(domainName, subDomain, callback) {
+      async.series([
+        function(cb) {
+          request(self.server).get('/')
+            .set('Host', subDomain + '.' + domainName)
+            .expect(200)
+            .expect(customHeaderPrefix + 'app-id', self.appId)
+            .expect(customHeaderPrefix + 'version-id', self.versionId)
+            .expect(customHeaderPrefix + 'app-cache', 'miss')
+            .expect(function(res) {
+              if (domainName === self.virtualHost) {
+                assert.isTrue(self.appRegistry.getByName.calledWith(self.appName));
+              } else {
+                assert.isTrue(self.appRegistry.getByDomain.calledWith(domainName, subDomain));
+              }
+
+              assert.isTrue(self.database.getVersion.calledWith(self.appId, self.versionId));
+              assert.isTrue(self.metrics.increment.calledWith('app-cache-miss'));
+            })
+            .end(cb);
+        },
+        function(cb) {
+          setTimeout(cb, 10);
+        },
+        function(cb) {
+          redisClient.get(subDomain + '.' + domainName, function(err, value) {
+            if (err) return cb(err);
+            var cachedContext = JSON.parse(value);
+            assert.equal(cachedContext.virtualApp.appId, self.appId);
+            assert.equal(cachedContext.virtualAppVersion.versionId, self.versionId);
+            cb();
+          });
+        },
+        function(cb) {
+          self.appRegistry.getByName.reset();
+          self.appRegistry.getByDomain.reset();
+          self.database.getVersion.reset();
+          // On subsequent request, the app context should come from the cache
+          request(self.server).get('/')
+            .set('Host', subDomain + '.' + domainName)
+            .expect(200)
+            .expect(customHeaderPrefix + 'app-id', self.appId)
+            .expect(customHeaderPrefix + 'version-id', self.versionId)
+            .expect(customHeaderPrefix + 'app-cache', 'hit')
+            .expect(function(res) {
+              if (domainName === self.virtualHost) {
+                assert.isFalse(self.appRegistry.getByDomain.called);
+              } else {
+                assert.isFalse(self.appRegistry.getByName.called);
+              }
+
+              assert.isFalse(self.database.getVersion.called);
+              assert.equal(res.body.virtualEnv, 'production');
+              assert.isTrue(self.metrics.increment.calledWith('app-cache-hit'));
+            })
+            .end(cb);
+        }
+      ], callback);
+    }
+  });
 
   describe('custom domain catch-all redirect', function() {
     beforeEach(function() {
       self = this;
-      this.domainName = shortid.generate().toLowerCase() + '.net';
+      this.domainName = randomDomain();
       // App not found
       this.appRegistry.getByDomain = function(domainName, subDomain, callback) {
         callback(null, null);
@@ -521,10 +670,13 @@ describe('virtualAppLoader()', function() {
         .expect(302)
         .expect(function(res) {
           assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'appname'));
-          // assert.isTrue(self.server.settings.database.getDomain.calledWith('customdomain.com'));
           assert.equal(res.headers.location, 'https://somewhere.com');
         })
         .end(done);
     });
   });
 });
+
+function randomDomain() {
+  return _.random(1000, 5000) + '-' + Date.now().toString() + '.com';
+}

@@ -27,7 +27,8 @@ describe('integration', function() {
       virtualHost: 'sharedhost.com',
       defaultVirtualEnvironment: 'production',
       enableContentCache: function() { return true; },
-      contentCache: redis.createClient({return_buffers: true})
+      contentCache: redis.createClient({return_buffers: true}),
+      cache: redis.createClient()
     });
 
     this.appId = shortid.generate();
