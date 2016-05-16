@@ -21,7 +21,9 @@
   ],
   "files": [
     "lib",
-    "index.js"
+    "index.js",
+    "robots.txt",
+    "favicon.ico"
   ],
   "author": "David Von Lehman",
   "license": "Apache-2.0",
