@@ -17,7 +17,7 @@ require('dash-assert');
 var redisClient = redis.createClient();
 var customHeaderPrefix = 'x-4front-';
 
-describe('virtualAppLoader()', function() {
+describe('appContextLoader()', function() {
   var self;
 
   beforeEach(function() {
@@ -632,7 +632,7 @@ describe('virtualAppLoader()', function() {
     });
 
     it('custom domains', function(done) {
-      var subDomain = shortid.generate().toLowerCase();
+      var subDomain = shortid.generate().toLowerCase().replace('_', '-');
       var customDomain = randomDomain();
       testAppContextCache(customDomain, subDomain, done);
     });
