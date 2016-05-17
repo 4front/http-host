@@ -354,24 +354,129 @@ describe('virtualAppLoader()', function() {
     it('request for www redirects to apex', function(done) {
       this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
         if (subDomain === 'www' || subDomain === '*') return callback(null, null);
-        callback(null, {
-          url: 'https://' + self.domainName,
-          environments: ['dev', 'production']
-        });
+        callback(null, _.assign(self.virtualApp, {url: 'https://' + self.domainName}));
       });
 
-      request(this.server)
-        .get('/blog')
-        .set('Host', 'www.' + this.domainName)
-        .expect(302)
-        .expect(function(res) {
-          assert.equal(self.appRegistry.getByDomain.callCount, 3);
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'www'));
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '@'));
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '*'));
-          assert.equal(res.headers.location, 'https://' + self.domainName + '/blog');
-        })
-        .end(done);
+      async.series([
+        function(cb) {
+          request(self.server)
+            .get('/blog?foo=1')
+            .set('Host', 'www.' + self.domainName)
+            .expect(302)
+            .expect(function(res) {
+              assert.equal(self.appRegistry.getByDomain.callCount, 3);
+              assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, 'www'));
+              assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '@'));
+              assert.isTrue(self.appRegistry.getByDomain.calledWith(self.domainName, '*'));
+              assert.equal(res.headers.location, 'https://' + self.domainName + '/blog?foo=1');
+            })
+            .end(cb);
+        },
+        function(cb) {
+          setTimeout(cb, 10);
+        },
+        function(cb) {
+          self.appRegistry.getByDomain.reset();
+          request(self.server)
+            .get('/blog?foo=2')
+            .set('Host', 'www.' + self.domainName)
+            .expect(302)
+            .expect(function(res) {
+              assert.isFalse(self.appRegistry.getByDomain.called);
+              assert.equal(res.headers.location, 'https://' + self.domainName + '/blog?foo=2');
+            })
+            .end(cb);
+        }
+      ], done);
+    });
+
+    it('returns correct env variables', function(done) {
+      var testVersionId = shortid.generate();
+
+      this.appRegistry.getByDomain = sinon.spy(function(domainName, subDomain, callback) {
+        if (subDomain === '@') {
+          return callback(null, _.assign({}, self.virtualApp, {environments: ['production', 'test']}));
+        }
+        return callback(null, null);
+      });
+
+      _.assign(this.virtualApp, {
+        env: {
+          _global: {MAX: 10},
+          production: {ENV_NAME: 'production'},
+          test: {ENV_NAME: 'test'}
+        },
+        trafficRules: {
+          production: [{rule: '*', versionId: self.versionId}],
+          test: [{rule: '*', versionId: testVersionId}]
+        }
+      });
+
+      async.series([
+        function(cb) {
+          request(self.server)
+            .get('/')
+            .set('Host', self.domainName)
+            .expect(function(res) {
+              assert.equal(res.body.virtualEnv, 'production');
+              assert.deepEqual(res.body.env, {
+                MAX: 10,
+                ENV_NAME: 'production'
+              });
+              assert.equal(res.body.virtualAppVersion.versionId, self.versionId);
+            })
+            .end(cb);
+        },
+        function(cb) {
+          request(self.server)
+            .get('/')
+            .set('Host', 'test.' + self.domainName)
+            .expect(function(res) {
+              assert.equal(res.body.virtualEnv, 'test');
+              assert.deepEqual(res.body.env, {
+                MAX: 10,
+                ENV_NAME: 'test'
+              });
+              assert.equal(res.body.virtualAppVersion.versionId, testVersionId);
+            })
+            .end(cb);
+        },
+        function(cb) {
+          setTimeout(cb, 10);
+        },
+        function(cb) {
+          self.appRegistry.getByDomain.reset();
+          request(self.server)
+            .get('/')
+            .set('Host', self.domainName)
+            .expect(function(res) {
+              assert.isFalse(self.appRegistry.getByDomain.called);
+              assert.equal(res.body.virtualEnv, 'production');
+              assert.deepEqual(res.body.env, {
+                MAX: 10,
+                ENV_NAME: 'production'
+              });
+              assert.equal(res.body.virtualAppVersion.versionId, self.versionId);
+            })
+            .end(cb);
+        },
+        function(cb) {
+          self.appRegistry.getByDomain.reset();
+          request(self.server)
+            .get('/')
+            .set('Host', 'test.' + self.domainName)
+            .expect(function(res) {
+              assert.isFalse(self.appRegistry.getByDomain.called);
+              assert.equal(res.body.virtualEnv, 'test');
+              assert.deepEqual(res.body.env, {
+                MAX: 10,
+                ENV_NAME: 'test'
+              });
+              assert.equal(res.body.virtualAppVersion.versionId, testVersionId);
+            })
+            .end(cb);
+        }
+      ], done);
     });
   });
 
