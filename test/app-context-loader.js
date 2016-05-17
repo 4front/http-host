@@ -65,7 +65,8 @@ describe('appContextLoader()', function() {
     this.cache = this.server.settings.cache = redisClient;
     // this.cache = this.server.settings.cache = memoryCache();
     this.metrics = this.server.settings.metrics = {
-      increment: sinon.spy(function() {})
+      hit: sinon.spy(function() {}),
+      miss: sinon.spy(function() {})
     };
 
     this.appRegistry = this.server.settings.virtualAppRegistry = {
@@ -654,7 +655,7 @@ describe('appContextLoader()', function() {
               }
 
               assert.isTrue(self.database.getVersion.calledWith(self.appId, self.versionId));
-              assert.isTrue(self.metrics.increment.calledWith('app-cache-miss'));
+              assert.isTrue(self.metrics.miss.calledWith('app-cache-hitrate'));
             })
             .end(cb);
         },
@@ -690,7 +691,7 @@ describe('appContextLoader()', function() {
 
               assert.isFalse(self.database.getVersion.called);
               assert.equal(res.body.virtualEnv, 'production');
-              assert.isTrue(self.metrics.increment.calledWith('app-cache-hit'));
+              assert.isTrue(self.metrics.hit.calledWith('app-cache-hitrate'));
             })
             .end(cb);
         }

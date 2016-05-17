@@ -28,7 +28,11 @@ describe('integration', function() {
       defaultVirtualEnvironment: 'production',
       enableContentCache: function() { return true; },
       contentCache: redis.createClient({return_buffers: true}),
-      cache: redis.createClient()
+      cache: redis.createClient(),
+      metrics: {
+        hit: function() {},
+        miss: function() {}
+      }
     });
 
     this.appId = shortid.generate();
@@ -91,7 +95,7 @@ describe('integration', function() {
           .expect(new RegExp('@@' + self.versionId + '@@'))
           .expect('Content-Encoding', 'gzip')
           .expect('Cache-Control', cacheControlHeader)
-          .expect('ETag', /\".*\"/)
+          .expect('ETag', /".*"/)
           .expect(customHeaderPrefix + 'app-id', self.appId)
           .expect(customHeaderPrefix + 'version-id', self.versionId)
           .expect(customHeaderPrefix + 'server-cache', /^miss/)

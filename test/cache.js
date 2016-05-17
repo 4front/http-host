@@ -34,7 +34,8 @@ describe('cache', function() {
     this.server = express();
 
     this.mockMetrics = {
-      increment: sinon.spy(function() {})
+      hit: sinon.spy(function() {}),
+      miss: sinon.spy(function() {})
     };
 
     _.assign(this.server.settings, {
@@ -468,7 +469,7 @@ describe('cache', function() {
           .expect(200)
           .expect('x-4front-server-cache', /^miss/)
           .expect(function(res) {
-            assert.isTrue(self.mockMetrics.increment.calledWith('content-cache-miss'));
+            assert.isTrue(self.mockMetrics.miss.calledWith('content-cache-hitrate'));
           })
           .end(cb);
       },
@@ -476,14 +477,15 @@ describe('cache', function() {
         setTimeout(cb, 20);
       },
       function(cb) {
-        self.mockMetrics.increment.reset();
+        self.mockMetrics.hit.reset();
+        self.mockMetrics.miss.reset();
 
         supertest(self.server)
           .get('/')
           .expect(200)
           .expect(customHeaderPrefix + 'server-cache', /^hit/)
           .expect(function(res) {
-            assert.isTrue(self.mockMetrics.increment.calledWith('content-cache-hit'));
+            assert.isTrue(self.mockMetrics.hit.calledWith('content-cache-hitrate'));
           })
           .end(cb);
       }
