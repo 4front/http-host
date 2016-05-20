@@ -24,6 +24,7 @@ describe('appContextLoader()', function() {
     self = this;
 
     this.server = express();
+    this.server.set('trust proxy', true);
 
     this.server.use(function(req, res, next) {
       req.ext = {};
@@ -490,18 +491,51 @@ describe('appContextLoader()', function() {
 
   describe('app with requireSsl set to true', function() {
     it('should redirect to https', function(done) {
+      var appName = randomSubDomain();
       this.appRegistry.getByName = function(name, callback) {
-        callback(null, {requireSsl: true, url: 'https://appname.' + self.virtualHost});
+        callback(null, _.assign(self.virtualApp, {
+          name: appName,
+          requireSsl: true,
+          url: 'https://' + appName + '.' + self.virtualHost
+        }));
       };
 
-      request(this.server)
-        .get('/path')
-        .set('Host', 'appname.' + self.virtualHost)
-        .expect(302)
-        .expect(function(res) {
-          assert.equal(res.headers.location, 'https://appname.' + self.virtualHost + '/path');
-        })
-        .end(done);
+      async.series([
+        function(cb) {
+          request(self.server)
+            .get('/path')
+            .set('Host', appName + '.' + self.virtualHost)
+            .expect(302)
+            .expect(function(res) {
+              assert.equal(res.headers.location, 'https://' + appName + '.' + self.virtualHost + '/path');
+            })
+            .end(cb);
+        },
+        function(cb) {
+          // The redirect should not be in the cache
+          self.cache.exists(appName + '.' + self.virtualHost, function(err, exists) {
+            if (err) return cb(err);
+            assert.equal(exists, 0);
+            cb();
+          });
+        },
+        function(cb) {
+          request(self.server)
+            .get('/path')
+            .set('Host', appName + '.' + self.virtualHost)
+            .set('x-forwarded-proto', 'https')
+            .expect(200)
+            .end(cb);
+        },
+        function(cb) {
+          // The app context should now be in the cache
+          self.cache.get(appName + '.' + self.virtualHost, function(err, json) {
+            if (err) return cb(err);
+            assert.equal(JSON.parse(json).virtualApp.name, appName);
+            cb();
+          });
+        }
+      ], done);
     });
 
     it('should redirect to https for root request', function(done) {
@@ -528,15 +562,27 @@ describe('appContextLoader()', function() {
         }));
       });
 
-      request(this.server)
-        .get('/path')
-        .set('Host', customDomain)
-        .expect(302)
-        .expect(function(res) {
-          assert.isTrue(self.appRegistry.getByDomain.calledWith(customDomain, '@'));
-          assert.equal(res.headers.location, 'https://' + customDomain + '/path');
-        })
-        .end(done);
+      async.series([
+        function(cb) {
+          request(self.server)
+            .get('/path')
+            .set('Host', customDomain)
+            .expect(302)
+            .expect(function(res) {
+              assert.isTrue(self.appRegistry.getByDomain.calledWith(customDomain, '@'));
+              assert.equal(res.headers.location, 'https://' + customDomain + '/path');
+            })
+            .end(cb);
+        },
+        function(cb) {
+          // Redirect to https should not be cached
+          self.cache.exists(customDomain, function(err, exists) {
+            if (err) return cb(err);
+            assert.equal(exists, 0);
+            cb();
+          });
+        }
+      ], done);
     });
 
     it('should redirect staging custom domain to https', function(done) {
@@ -789,6 +835,10 @@ describe('appContextLoader()', function() {
     });
   });
 });
+
+function randomSubDomain() {
+  return _.random(1000, 5000) + '-' + Date.now().toString();
+}
 
 function randomDomain() {
   return _.random(1000, 5000) + '-' + Date.now().toString() + '.com';
