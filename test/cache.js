@@ -42,7 +42,8 @@ describe('cache', function() {
       customHttpHeaderPrefix: customHeaderPrefix,
       contentCache: contentCache,
       metrics: this.mockMetrics,
-      maxContentCacheLength: bytes.parse('500kb')
+      maxContentCacheLength: bytes.parse('500kb'),
+      noCacheHttpHeader: cacheControlHeader
     });
 
     this.compressionThreshold = null;
