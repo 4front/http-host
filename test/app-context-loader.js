@@ -89,7 +89,7 @@ describe('appContextLoader()', function() {
 
     this.server.use(function(req, res, next) {
       res.json(_.pick(req.ext, 'virtualEnv', 'virtualApp', 'virtualHost',
-        'clientConfig', 'env', 'virtualAppVersion'));
+        'clientConfig', 'env', 'virtualAppVersion', 'subDomain'));
     });
 
     this.server.use(testUtil.errorHandler);
@@ -278,8 +278,15 @@ describe('appContextLoader()', function() {
             assert.equal(res.body.virtualEnv, 'production');
             assert.equal(res.body.virtualHost, subDomain + '.' + self.domainName);
             assert.equal(res.body.virtualApp.appId, self.appId);
+            assert.equal(res.body.subDomain, '*');
           })
-          .end(cb);
+          .end(function(err) {
+            if (err) return cb(err);
+            self.cache.exists(subDomain + '.' + self.domainName, function(_err, exists) {
+              assert.equal(exists, 0);
+              cb();
+            });
+          });
       }, done);
     });
 
