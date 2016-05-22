@@ -3,5 +3,7 @@ node_js:
   - "4"
 services:
   - redis-server
+env:
+  - NODE_ENV=development
 script: "npm run test-travis && npm run lint"
 after_script: "npm install coveralls@2.10.0 && cat ./coverage/lcov.info | coveralls"
