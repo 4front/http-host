@@ -534,6 +534,15 @@ describe('appContextLoader()', function() {
             assert.equal(JSON.parse(json).virtualApp.name, appName);
             cb();
           });
+        },
+        // Now make a non-ssl request when the app context is cached.
+        function(cb) {
+          request(self.server)
+            .get('/')
+            .set('Host', appName + '.' + self.virtualHost)
+            .expect(302)
+            .expect('Location', 'https://' + appName + '.' + self.virtualHost)
+            .end(cb);
         }
       ], done);
     });
