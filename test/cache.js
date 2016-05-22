@@ -51,18 +51,21 @@ describe('cache', function() {
 
     this.versionId = shortid.generate();
     this.appId = shortid.generate();
+    this.virtualApp = {
+      appId: this.appId
+    };
+    this.env = {};
 
     this.server.use(function(req, res, next) {
       req.protocol = 'http';
       req.ext = {
         contentCacheEnabled: true,
-        virtualApp: {
-          appId: self.appId
-        },
+        virtualApp: self.virtualApp,
         virtualAppVersion: {
           versionId: self.versionId,
           name: self.versionId
-        }
+        },
+        env: self.env
       };
 
       if (self.overrideCacheControl) {
@@ -577,6 +580,41 @@ describe('cache', function() {
           assert.equal(exists, 0);
           cb();
         });
+      }
+    ], done);
+  });
+
+  it('changing environment variable results in different cached response', function(done) {
+    var initialCacheKey;
+    var nextCacheKey;
+
+    self.env = {foo: 1};
+
+    async.series([
+      function(cb) {
+        supertest(self.server)
+          .get('/')
+          .expect(200)
+          .expect(function(res) {
+            assert.isTrue(self.loadContent.called);
+            initialCacheKey = getCacheKeyFromHeader(res);
+          })
+          .end(cb);
+      },
+      function(cb) {
+        self.loadContent.reset();
+        self.env = {foo: 2};
+
+        supertest(self.server)
+          .get('/')
+          .expect(200)
+          .expect('content-cache', /^miss/)
+          .expect(function(res) {
+            assert.isTrue(self.loadContent.called);
+            nextCacheKey = getCacheKeyFromHeader(res);
+            assert.notEqual(nextCacheKey, initialCacheKey);
+          })
+          .end(cb);
       }
     ], done);
   });
