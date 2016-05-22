@@ -699,7 +699,6 @@ describe('appContextLoader()', function() {
             .expect(200)
             .expect(customHeaderPrefix + 'app-id', self.appId)
             .expect(customHeaderPrefix + 'version-id', self.versionId)
-            .expect(customHeaderPrefix + 'app-cache', 'miss')
             .expect(function(res) {
               if (domainName === self.virtualHost) {
                 assert.isTrue(self.appRegistry.getByName.calledWith(self.appName));
@@ -734,7 +733,6 @@ describe('appContextLoader()', function() {
             .expect(200)
             .expect(customHeaderPrefix + 'app-id', self.appId)
             .expect(customHeaderPrefix + 'version-id', self.versionId)
-            .expect(customHeaderPrefix + 'app-cache', 'hit')
             .expect(function(res) {
               if (domainName === self.virtualHost) {
                 assert.isFalse(self.appRegistry.getByDomain.called);

@@ -98,9 +98,9 @@ describe('integration', function() {
           .expect('ETag', /".*"/)
           .expect(customHeaderPrefix + 'app-id', self.appId)
           .expect(customHeaderPrefix + 'version-id', self.versionId)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(function(res) {
-            cacheKey = res.get(customHeaderPrefix + 'server-cache').split(' ')[1];
+            cacheKey = res.get('content-cache').split(' ')[1];
             assert.isTrue(self.virtualAppRegistry.getByDomain.calledWith('custom-domain.com', 'www'));
             assert.isTrue(self.database.getVersion.calledWith(self.appId, self.versionId));
             var storagePath = self.appId + '/' + self.versionId + '/index.html';
@@ -126,7 +126,7 @@ describe('integration', function() {
           .expect('ETag', '"' + cacheKey + '"')
           .expect(customHeaderPrefix + 'app-id', self.appId)
           .expect(customHeaderPrefix + 'version-id', self.versionId)
-          .expect(customHeaderPrefix + 'server-cache', 'hit ' + cacheKey)
+          .expect('content-cache', 'hit ' + cacheKey)
           .expect(function(res) {
             assert.isFalse(self.storage.fileExists.called);
             assert.isFalse(self.storage.readFileStream.called);
@@ -152,9 +152,9 @@ describe('integration', function() {
           .expect('Cache-Control', cacheControlHeader)
           .expect(customHeaderPrefix + 'app-id', self.appId)
           .expect(customHeaderPrefix + 'version-id', self.versionId)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(function(res) {
-            cacheKey = res.get(customHeaderPrefix + 'server-cache').split(' ')[1];
+            cacheKey = res.get('content-cache').split(' ')[1];
             assert.isTrue(self.virtualAppRegistry.getByDomain.calledWith('custom-domain.com', 'www'));
             assert.isTrue(self.database.getVersion.calledWith(self.appId, self.versionId));
             var storagePath = self.appId + '/' + self.versionId + '/test.jpg';
@@ -178,7 +178,7 @@ describe('integration', function() {
           .expect('Cache-Control', cacheControlHeader)
           .expect(customHeaderPrefix + 'app-id', self.appId)
           .expect(customHeaderPrefix + 'version-id', self.versionId)
-          .expect(customHeaderPrefix + 'server-cache', 'hit ' + cacheKey)
+          .expect('content-cache', 'hit ' + cacheKey)
           .expect(function(res) {
             assert.isFalse(self.storage.readFileStream.called);
           })

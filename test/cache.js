@@ -117,7 +117,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/')
           .expect(200)
-          .expect('x-4front-server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(self.htmlContent)
           .expect(function(res) {
             assert.isTrue(self.loadContent.called);
@@ -138,7 +138,7 @@ describe('cache', function() {
           .get('/')
           .expect(200)
           .expect(self.htmlContent)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(function(res) {
             assert.isTrue(self.loadContent.called);
             nextCacheKey = getCacheKeyFromHeader(res);
@@ -182,7 +182,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/')
           .expect(200)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect('Content-Encoding', 'gzip')
           .expect(self.htmlContent)
           .expect(function(res) {
@@ -227,7 +227,7 @@ describe('cache', function() {
         // Now the content is in the cache.
         supertest(self.server).get('/')
           .expect(200)
-          .expect(customHeaderPrefix + 'server-cache', /^hit/)
+          .expect('content-cache', /^hit/)
           .expect('Content-Encoding', 'gzip')
           .expect('ETag', etag)
           .expect(self.htmlContent)
@@ -249,7 +249,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/')
           .expect(200)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(self.htmlContent)
           .expect(function(res) {
             assert.isUndefined(res.get('Content-Encoding'));
@@ -293,7 +293,7 @@ describe('cache', function() {
         // Now the content is in the cache.
         supertest(self.server).get('/')
           .expect(200)
-          .expect(customHeaderPrefix + 'server-cache', /^hit/)
+          .expect('content-cache', /^hit/)
           .expect('ETag', etag)
           .expect(self.htmlContent)
           .expect(function(res) {
@@ -320,7 +320,7 @@ describe('cache', function() {
           .get('/redirect?original=1')
           .expect(302)
           .expect('Cache-Control', cacheControlHeader)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(function(res) {
             assert.isUndefined(res.get('ETag'));
             assert.isTrue(self.loadContent.called);
@@ -353,7 +353,7 @@ describe('cache', function() {
           .get('/redirect?new=1')
           .expect(302)
           .expect('Cache-Control', cacheControlHeader)
-          .expect(customHeaderPrefix + 'server-cache', /^hit/)
+          .expect('content-cache', /^hit/)
           .expect(function(res) {
             assert.isUndefined(res.get('ETag'));
             assert.equal(res.get('Location'), '/destination?new=1');
@@ -390,7 +390,7 @@ describe('cache', function() {
           .set('If-None-Match', initialETag)
           .expect(304)
           .expect(function(res) {
-            assert.isUndefined(res.headers[customHeaderPrefix + 'server-cache']);
+            assert.isUndefined(res.headers['content-cache']);
             assert.isFalse(self.loadContent.called);
           })
           .end(cb);
@@ -433,7 +433,7 @@ describe('cache', function() {
       function(cb) {
         supertest(self.server)
           .get('/' + imageName)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect('Content-Type', 'image/jpg')
           .expect('Cache-Control', cacheControlHeader)
           .expect(function(res) {
@@ -452,7 +452,7 @@ describe('cache', function() {
           .get('/' + imageName)
           .expect('Content-Type', 'image/jpg')
           .expect('Cache-Control', cacheControlHeader)
-          .expect(customHeaderPrefix + 'server-cache', 'hit ' + cacheKey)
+          .expect('content-cache', 'hit ' + cacheKey)
           .expect(function(res) {
             assert.isUndefined(res.get('Content-Encoding'));
             assert.isFalse(loadImage.called);
@@ -468,7 +468,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/')
           .expect(200)
-          .expect('x-4front-server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(function(res) {
             assert.isTrue(self.mockMetrics.miss.calledWith('content-cache-hitrate'));
           })
@@ -484,7 +484,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/')
           .expect(200)
-          .expect(customHeaderPrefix + 'server-cache', /^hit/)
+          .expect('content-cache', /^hit/)
           .expect(function(res) {
             assert.isTrue(self.mockMetrics.hit.calledWith('content-cache-hitrate'));
           })
@@ -518,7 +518,7 @@ describe('cache', function() {
         supertest(self.server)
           .get('/' + pageName)
           .expect(404)
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(notFoundResponse)
           .expect(function(res) {
             assert.isTrue(loadNotFound.called);
@@ -557,7 +557,7 @@ describe('cache', function() {
     async.series([
       function(cb) {
         supertest(self.server).get('/test.jpg')
-          .expect(customHeaderPrefix + 'server-cache', /^miss/)
+          .expect('content-cache', /^miss/)
           .expect(function(res) {
             cacheKey = getCacheKeyFromHeader(res);
           })
@@ -604,7 +604,7 @@ describe('cache', function() {
   });
 
   function getCacheKeyFromHeader(res) {
-    return res.get('x-4front-server-cache').split(' ')[1];
+    return res.get('content-cache').split(' ')[1];
   }
 
   function getHeadersFromCache(cacheKey, callback) {
