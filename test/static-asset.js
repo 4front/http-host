@@ -351,6 +351,7 @@ describe('staticAsset', function() {
       .expect(200)
       .expect('Content-Encoding', 'base64')
       .expect(function(res) {
+        assert.isUndefined(res.headers['content-length']);
         assert.equal(new Buffer(res.text, 'base64'), contents);
       })
       .end(done);
