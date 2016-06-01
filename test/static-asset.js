@@ -337,4 +337,22 @@ describe('staticAsset', function() {
       })
       .end(done);
   });
+
+  it('returns base64 encoded response', function(done) {
+    var contents = '<html></html>';
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(contents);
+    });
+
+    supertest(this.server)
+      .get('/file.txt')
+      .set('Accept-Encoding', 'base64')
+      .expect(200)
+      .expect('Content-Encoding', 'base64')
+      .expect(function(res) {
+        assert.equal(new Buffer(res.text, 'base64'), contents);
+      })
+      .end(done);
+  });
 });

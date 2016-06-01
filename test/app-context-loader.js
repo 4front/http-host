@@ -695,7 +695,7 @@ describe('appContextLoader()', function() {
     });
 
     it('custom domains', function(done) {
-      var subDomain = shortid.generate().toLowerCase().replace('_', '-');
+      var subDomain = randomSubDomain();
       var customDomain = randomDomain();
       testAppContextCache(customDomain, subDomain, done);
     });
