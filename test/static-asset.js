@@ -34,6 +34,9 @@ describe('staticAsset', function() {
       }),
       getMetadata: sinon.spy(function(filePath, callback) {
         callback(null, self.metadata);
+      }),
+      fileExists: sinon.spy(function(filePath, callback) {
+        callback(null, true);
       })
     };
 
@@ -111,8 +114,8 @@ describe('staticAsset', function() {
 
   describe('returns 404 for missing files', function() {
     beforeEach(function() {
-      this.storage.readFileStream = function() {
-        return streamTestUtils.emitter('missing');
+      this.storage.fileExists = function(key, cb) {
+        cb(null, false);
       };
     });
 

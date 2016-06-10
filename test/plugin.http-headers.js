@@ -20,6 +20,9 @@ describe('httpHeaders', function() {
     this.storage = this.server.settings.storage = {
       readFileStream: sinon.spy(function() {
         return fs.createReadStream(path.join(__dirname, './fixtures/bg.jpg'));
+      }),
+      fileExists: sinon.spy(function(filepath, cb) {
+        cb(null, true);
       })
     };
 

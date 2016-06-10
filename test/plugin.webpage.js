@@ -134,6 +134,32 @@ describe('webPage', function() {
         })
         .end(done);
     });
+
+    it('reads from primary bucket', function(done) {
+      var storagePath = self.storagePath('index.html');
+      supertest(this.server)
+        .get('/')
+        .expect(200)
+        .expect(function(res) {
+          assert.isTrue(self.storage.readFileStream.calledWith(storagePath, false));
+        })
+        .end(done);
+    });
+
+    it('reads from fallback bucket', function(done) {
+      var storagePath = self.storagePath('index.html');
+      this.storage.fileExists = sinon.spy(function(filePath, cb) {
+        cb(null, 'fallback');
+      });
+
+      supertest(this.server)
+        .get('/')
+        .expect(200)
+        .expect(function(res) {
+          assert.isTrue(self.storage.readFileStream.calledWith(storagePath, true));
+        })
+        .end(done);
+    });
   });
 
   it('returns 400 if no virtualApp context', function(done) {
@@ -150,7 +176,7 @@ describe('webPage', function() {
       .get('/')
       .expect(200)
       .expect('Content-Type', /^text\/html/)
-      .expect(/\<title\>test page\<\/title\>/)
+      .expect(/<title>test page<\/title>/)
       .end(done);
   });
 
@@ -236,7 +262,6 @@ describe('webPage', function() {
           } else if (_.endsWith(filePath, 'index.json')) {
             return streamTestUtils.buffer('{}');
           }
-          return streamTestUtils.emitter('missing');
         })
       });
     });
