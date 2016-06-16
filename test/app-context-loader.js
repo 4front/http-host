@@ -67,7 +67,8 @@ describe('appContextLoader()', function() {
     // this.cache = this.server.settings.cache = memoryCache();
     this.metrics = this.server.settings.metrics = {
       hit: sinon.spy(function() {}),
-      miss: sinon.spy(function() {})
+      miss: sinon.spy(function() {}),
+      increment: sinon.spy(function() {})
     };
 
     this.appRegistry = this.server.settings.virtualAppRegistry = {

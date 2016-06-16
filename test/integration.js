@@ -31,7 +31,8 @@ describe('integration', function() {
       cache: redis.createClient(),
       metrics: {
         hit: function() {},
-        miss: function() {}
+        miss: function() {},
+        increment: function() {}
       }
     });
 
