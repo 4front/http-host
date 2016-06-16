@@ -43,7 +43,8 @@ describe('staticAsset', function() {
     _.extend(this.server.settings, {
       staticAssetMaxAge: 500000,
       deployedAssetsPath: '/deployments',
-      baseUrlPlaceholder: 'https://__baseurl__'
+      baseUrlPlaceholder: 'https://__baseurl__',
+      metrics: testUtil.debugMetrics()
     });
 
     this.appId = shortid.generate();

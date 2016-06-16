@@ -8,6 +8,7 @@ var _ = require('lodash');
 var streamTestUtils = require('./stream-test-utils');
 var shortid = require('shortid');
 var redis = require('redis');
+var testUtil = require('./test-util');
 
 require('redis-streams')(redis);
 require('dash-assert');
@@ -29,11 +30,7 @@ describe('integration', function() {
       enableContentCache: function() { return true; },
       contentCache: redis.createClient({return_buffers: true}),
       cache: redis.createClient(),
-      metrics: {
-        hit: function() {},
-        miss: function() {},
-        increment: function() {}
-      }
+      metrics: testUtil.debugMetrics()
     });
 
     this.appId = shortid.generate();

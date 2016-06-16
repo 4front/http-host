@@ -28,7 +28,8 @@ describe('webPage', function() {
     _.assign(this.server.settings, {
       deployedAssetsPath: 'assethost.com/deployments',
       customHttpHeaderPrefix: 'x-4front-',
-      contentCache: memoryCache()
+      contentCache: memoryCache(),
+      metrics: testUtil.debugMetrics()
     });
 
     this.contentCache = this.server.settings.contentCache;

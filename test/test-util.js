@@ -1,6 +1,8 @@
 /* eslint no-console: 0 */
 var EventEmitter = require('events');
 var util = require('util');
+var sinon = require('sinon');
+var metricDebug = require('debug')('metrics');
 
 require('simple-errors');
 
@@ -18,6 +20,23 @@ module.exports.errorHandler = function(err, req, res, next) {
     }
     res.json(Error.toJson(err));
   }
+};
+
+module.exports.debugMetrics = function() {
+  return {
+    hit: sinon.spy(function(key) {
+      metricDebug('hit %s', key);
+    }),
+    miss: sinon.spy(function(key) {
+      metricDebug('miss %s', key);
+    }),
+    increment: sinon.spy(function(key) {
+      metricDebug('increment %s', key);
+    }),
+    timing: function(key, ms) {
+      metricDebug('timing %s - %s ms', key, Math.round(ms * 100) / 100);
+    }
+  };
 };
 
 function MockEventEmitter() {

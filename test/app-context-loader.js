@@ -64,12 +64,7 @@ describe('appContextLoader()', function() {
     };
 
     this.cache = this.server.settings.cache = redisClient;
-    // this.cache = this.server.settings.cache = memoryCache();
-    this.metrics = this.server.settings.metrics = {
-      hit: sinon.spy(function() {}),
-      miss: sinon.spy(function() {}),
-      increment: sinon.spy(function() {})
-    };
+    this.metrics = this.server.settings.metrics = testUtil.debugMetrics();
 
     this.appRegistry = this.server.settings.virtualAppRegistry = {
       getByName: sinon.spy(function(name, callback) {

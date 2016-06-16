@@ -56,6 +56,7 @@
     "on-finished": "^2.3.0",
     "on-headers": "^1.0.1",
     "path-to-regexp": "^1.2.1",
+    "performance-now": "^0.2.0",
     "prerender-node": "github:4front/prerender-node",
     "psl": "^1.1.10",
     "replacestream": "^4.0.0",
