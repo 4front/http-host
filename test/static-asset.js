@@ -303,6 +303,29 @@ describe('staticAsset', function() {
       .end(done);
   });
 
+  it('updates __baseurl__ in robots.txt', function(done) {
+    var contents = 'User-agent: *' +
+      '\nSitemap: https://__baseurl__//robots.txt' +
+      '\nDisallow: /';
+
+    this.storage.readFileStream = sinon.spy(function() {
+      return streamTestUtils.buffer(contents);
+    });
+
+    supertest(this.server)
+      .get('/robots.txt')
+      .expect('Content-Type', /^text\/plain/)
+      .expect(200)
+      .expect(function(res) {
+        var expected = 'User-agent: *' +
+          '\nSitemap: http://127.0.0.1/robots.txt' +
+          '\nDisallow: /';
+
+        assert.equal(res.text.trim(), expected);
+      })
+      .end(done);
+  });
+
   it('handles double slashes in baseurl', function(done) {
     var contents = '<xml>https://__baseurl__//foo</xml>';
 
