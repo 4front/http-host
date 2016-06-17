@@ -75,6 +75,8 @@ describe('integration', function() {
     this.server.use(function(req, res, next) {
       require('../lib/http-host')(self.server.settings)(req, res, next);
     });
+
+    this.customDomain = 'custom-domain-' + Date.now() + '.com';
   });
 
   it('serves a webpage on custom domain', function(done) {
@@ -88,7 +90,7 @@ describe('integration', function() {
       function(cb) {
         supertest(self.server)
           .get('/')
-          .set('Host', 'www.custom-domain.com')
+          .set('Host', 'www.' + self.customDomain)
           .expect(200)
           .expect(new RegExp('@@' + self.versionId + '@@'))
           .expect('Content-Encoding', 'gzip')
@@ -99,7 +101,7 @@ describe('integration', function() {
           .expect('content-cache', /^miss/)
           .expect(function(res) {
             cacheKey = res.get('content-cache').split(' ')[1];
-            assert.isTrue(self.virtualAppRegistry.getByDomain.calledWith('custom-domain.com', 'www'));
+            assert.isTrue(self.virtualAppRegistry.getByDomain.calledWith(self.customDomain, 'www'));
             assert.isTrue(self.database.getVersion.calledWith(self.appId, self.versionId));
             var storagePath = self.appId + '/' + self.versionId + '/index.html';
             assert.isTrue(self.storage.fileExists.calledWith(storagePath));
@@ -116,7 +118,7 @@ describe('integration', function() {
         self.storage.readFileStream.reset();
         supertest(self.server)
           .get('/')
-          .set('Host', 'www.custom-domain.com')
+          .set('Host', 'www.' + self.customDomain)
           .expect(200)
           .expect(new RegExp('@@' + self.versionId + '@@'))
           .expect('Content-Encoding', 'gzip')
@@ -144,7 +146,7 @@ describe('integration', function() {
       function(cb) {
         supertest(self.server)
           .get('/test.jpg')
-          .set('Host', 'www.custom-domain.com')
+          .set('Host', 'www.' + self.customDomain)
           .expect(200)
           .expect('Content-Type', 'image/jpeg')
           .expect('Cache-Control', cacheControlHeader)
@@ -153,7 +155,7 @@ describe('integration', function() {
           .expect('content-cache', /^miss/)
           .expect(function(res) {
             cacheKey = res.get('content-cache').split(' ')[1];
-            assert.isTrue(self.virtualAppRegistry.getByDomain.calledWith('custom-domain.com', 'www'));
+            assert.isTrue(self.virtualAppRegistry.getByDomain.calledWith(self.customDomain, 'www'));
             assert.isTrue(self.database.getVersion.calledWith(self.appId, self.versionId));
             var storagePath = self.appId + '/' + self.versionId + '/test.jpg';
             assert.isTrue(self.storage.readFileStream.calledWith(storagePath));
@@ -170,7 +172,7 @@ describe('integration', function() {
 
         supertest(self.server)
           .get('/test.jpg')
-          .set('Host', 'www.custom-domain.com')
+          .set('Host', 'www.' + self.customDomain)
           .expect(200)
           .expect('Content-Type', 'image/jpeg')
           .expect('Cache-Control', cacheControlHeader)
