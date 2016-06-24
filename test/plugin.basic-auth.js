@@ -182,6 +182,46 @@ describe('basicAuth()', function() {
         .end(done);
     });
   });
+
+  describe('multiple sets of credentials', function() {
+    beforeEach(function() {
+      this.options = {
+        credentials: [
+          {
+            username: 'abc',
+            password: '123'
+          },
+          {
+            username: 'username',
+            password: 'password'
+          },
+          {
+            username: 'xyz',
+            password: '123'
+          }
+        ]
+      };
+    });
+
+    it('allows user to login if provided creds matches a pair in the list', function(done) {
+      supertest(server)
+        .get('/')
+        .set('Authorization', authHeader('username', 'password'))
+        .expect(200)
+        .expect(function(res) {
+          assert.equal(res.text, 'OK');
+        })
+        .end(done);
+    });
+
+    it('fails auth if none of the credentials match', function(done) {
+      supertest(server)
+        .get('/')
+        .set('Authorization', authHeader('username', 'wrong'))
+        .expect(401)
+        .end(done);
+    });
+  });
 });
 
 function authHeader(username, password) {
