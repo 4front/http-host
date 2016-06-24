@@ -197,7 +197,7 @@ describe('basicAuth()', function() {
           },
           {
             username: 'xyz',
-            password: '123'
+            password: '789'
           }
         ]
       };
