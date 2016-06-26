@@ -142,22 +142,7 @@ describe('webPage', function() {
         .get('/')
         .expect(200)
         .expect(function(res) {
-          assert.isTrue(self.storage.readFileStream.calledWith(storagePath, false));
-        })
-        .end(done);
-    });
-
-    it('reads from fallback bucket', function(done) {
-      var storagePath = self.storagePath('index.html');
-      this.storage.fileExists = sinon.spy(function(filePath, cb) {
-        cb(null, 'fallback');
-      });
-
-      supertest(this.server)
-        .get('/')
-        .expect(200)
-        .expect(function(res) {
-          assert.isTrue(self.storage.readFileStream.calledWith(storagePath, true));
+          assert.isTrue(self.storage.readFileStream.calledWith(storagePath));
         })
         .end(done);
     });

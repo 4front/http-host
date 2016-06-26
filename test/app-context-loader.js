@@ -837,29 +837,6 @@ describe('appContextLoader()', function() {
         .end(done);
     });
   });
-
-  it('loads version from database fallback', function(done) {
-    this.database.getVersion = sinon.spy(function(appId, versionId, callback) {
-      callback(null, null);
-    });
-
-    this.databaseFallback = this.server.settings.databaseFallback = {
-      getVersion: sinon.spy(function(appId, versionId, callback) {
-        callback(null, {versionId: self.versionId});
-      })
-    };
-
-    request(this.server)
-      .get('/')
-      .set('Host', 'appname.' + self.virtualHost)
-      .expect(customHeaderPrefix + 'app-id', self.appId)
-      .expect(customHeaderPrefix + 'version-id', self.versionId)
-      .expect(function(res) {
-        assert.isTrue(self.database.getVersion.calledWith(self.appId, self.versionId));
-        assert.isTrue(self.databaseFallback.getVersion.calledWith(self.appId, self.versionId));
-      })
-      .end(done);
-  });
 });
 
 function randomSubDomain() {
